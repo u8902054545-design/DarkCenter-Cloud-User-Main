@@ -209,7 +209,7 @@
 
                 <div id="action-active" class="absolute inset-0 w-full h-full flex gap-3 transition-all duration-300 transform opacity-0 scale-95 pointer-events-none">
                     
-                    <button onclick="goToTasks()" class="flex-1 h-full bg-neutral-800 hover:bg-neutral-700 border border-white/10 text-white font-semibold rounded-2xl active-scale flex justify-center items-center gap-2 transition-all">
+                    <button onclick="checkShiftStatusAndGoToTasks()" class="flex-1 h-full bg-neutral-800 hover:bg-neutral-700 border border-white/10 text-white font-semibold rounded-2xl active-scale flex justify-center items-center gap-2 transition-all">
                         <span>Перейти к задачам</span>
                         <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </button>
@@ -271,16 +271,13 @@
 
     <script>
         // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ***
-        // Убедитесь, что это ваш актуальный URL развертывания
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBQYQUq_485jOlnRDV2gonG_t3VmL4zKvYVbmSMgKJvV7zZpEjYJ6F0lo0kYqh4HEnOA/exec';
+        const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
 
         // --- СОСТОЯНИЕ ---
         let isSlotActive = false;
         let notificationTimeout;
         let currentAction = null; 
-        
-        // !!! КОНСТАНТА ССЫЛКИ НА ЗАДАЧИ !!!
-        const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
 
         // --- ГЛОБАЛЬНЫЕ ФУНКЦИИ ЗАГРУЗКИ ---
         function showLoading() {
@@ -297,15 +294,12 @@
         // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ С GOOGLE ТАБЛИЦЕЙ ---
 
         /**
-         * Получает текущий статус смены при загрузке страницы.
+         * Выполняет запрос к серверу для получения текущего статуса смены.
+         * @param {boolean} showLoader - Показывать ли спиннер при запросе.
+         * @returns {Promise<string|null>} 'Open', 'Closed', или null в случае ошибки.
          */
-        async function fetchShiftStatus() {
-            // Показываем спиннер только при первой загрузке
-            const isInitialLoad = document.getElementById('status-text').textContent === "Загрузка...";
-            
-            if (isInitialLoad) {
-                showLoading();
-            }
+        async function fetchShiftStatus(showLoader = true) {
+            if (showLoader) showLoading();
             
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
@@ -321,25 +315,56 @@
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    const status = data.shiftStatus;
-                    // Второй аргумент 'false' = не обновлять isSlotActive, т.к. это чтение статуса
-                    setSlotState(status === 'Open', false);
+                    return data.shiftStatus;
                 } else {
                     console.error("Error fetching status:", data.message);
+                    return null;
                 }
 
             } catch (error) {
                 console.error('Fetch error:', error);
-                if (isInitialLoad) {
+                if (showLoader) {
                     showToast("error", "Ошибка сети", "Не удалось получить статус смены.");
-                    setSlotState(false, false); 
                 }
+                return null;
             } finally {
-                if (isInitialLoad) {
-                    hideLoading(); // Скрываем после начальной загрузки
-                }
+                if (showLoader) hideLoading(); 
             }
         }
+        
+        /**
+         * Функция для проверки статуса на сервере перед переходом к задачам.
+         */
+        async function checkShiftStatusAndGoToTasks() {
+            // 1. Показываем индикатор загрузки
+            showLoading();
+
+            // 2. Выполняем запрос к серверу для получения актуального статуса
+            const actualStatus = await fetchShiftStatus(false); // Не показываем дополнительный лоадер внутри, т.к. он уже показан
+
+            // 3. Скрываем индикатор загрузки
+            hideLoading();
+            
+            if (actualStatus === 'Open') {
+                showToast("success", "Смена активна", "Перенаправление к задачам...");
+                // Обновляем локальное состояние, если оно вдруг не обновилось
+                setSlotState(true); 
+                
+                // Переход по ссылке
+                setTimeout(() => {
+                    window.location.href = TASKS_URL;
+                }, 500);
+                
+            } else if (actualStatus === 'Closed') {
+                showToast("error", "Смена закрыта", "Для перехода к задачам необходимо начать смену.");
+                // Обновляем локальное состояние, если оно вдруг не обновилось
+                setSlotState(false);
+            } else {
+                showToast("error", "Ошибка сервера", "Не удалось проверить статус смены.");
+            }
+        }
+        // !!! КОНЕЦ ДОБАВЛЕННОЙ/ИЗМЕНЕННОЙ ФУНКЦИИ !!!
+
 
         /**
          * Отправляет новый статус смены в Google Таблицу.
@@ -399,22 +424,6 @@
                 closeBottomSheet();
             }
         }
-        
-        /**
-         * Проверяет, открыта ли смена, и перенаправляет на страницу задач.
-         */
-        function goToTasks() {
-            if (isSlotActive) {
-                showToast("neutral", "Переход", "Перенаправление на страницу задач...");
-                // Используем небольшую задержку, чтобы пользователь увидел Toast
-                setTimeout(() => {
-                    window.location.href = TASKS_URL;
-                }, 500); 
-            } else {
-                showToast("error", "Смена закрыта", "Для перехода к задачам необходимо сначала начать смену.");
-            }
-        }
-        // !!! КОНЕЦ ДОБАВЛЕННОЙ ФУНКЦИИ !!!
 
         /**
          * Обновляет состояние и внешний вид интерфейса.
@@ -479,9 +488,6 @@
         }
 
         // --- ЛОГИКА BOTTOM SHEET (ШТОРКА) ---
-        // (Остальной код функций openBottomSheet, closeBottomSheet, showToast остается без изменений, 
-        // так как они не используют асинхронные запросы напрямую)
-
         function openBottomSheet(actionType) {
             currentAction = actionType;
             const backdrop = document.getElementById('sheet-backdrop');
@@ -568,16 +574,26 @@
         // --- ИНИЦИАЛИЗАЦИЯ И АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ ---
         const INTERVAL_MS = 3000; // Интервал в миллисекундах (3 секунды)
         
-        document.addEventListener('DOMContentLoaded', (event) => {
+        document.addEventListener('DOMContentLoaded', async () => {
             // 1. Загружаем статус смены сразу при загрузке страницы
-            fetchShiftStatus(); 
+            const initialStatus = await fetchShiftStatus(true); // Показываем лоадер при старте
+            if (initialStatus) {
+                setSlotState(initialStatus === 'Open', false);
+            } else {
+                setSlotState(false, false); // Устанавливаем в закрыто в случае ошибки
+            }
             
             // 2. Настраиваем регулярное обновление статуса
-            setInterval(fetchShiftStatus, INTERVAL_MS);
+            setInterval(async () => {
+                const status = await fetchShiftStatus(false); // Не показываем лоадер при фоновом обновлении
+                if (status) {
+                     setSlotState(status === 'Open', true);
+                }
+            }, INTERVAL_MS);
             
             // Защита от случайного копирования
             document.addEventListener('contextmenu', e => e.preventDefault());
         });
     </script>
 </body>
-</html>
+    </html>
