@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Личный Кабинет</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: '#0a0a0a',
+                        card: '#171717',
+                        'custom-blue': '#3b82f6',
+                        'custom-blue-hover': '#2563eb',
+                    },
+                    boxShadow: {
+                        'glow-blue': '0 0 20px rgba(59, 130, 246, 0.3)',
+                        'glow-red': '0 0 20px rgba(239, 68, 68, 0.3)',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                        'slide-up-sheet': 'slideUpSheet 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUpSheet: {
+                            '0%': { transform: 'translateY(100%)' },
+                            '100%': { transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0a0a0a;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            overscroll-behavior-y: none; /* Предотвращает оттягивание страницы на iOS */
+        }
+
+        /* Текстура шума */
+        .bg-noise {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: -1; opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .glass-panel {
+            background: rgba(23, 23, 23, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .active-scale:active {
+            transform: scale(0.96);
+        }
+        
+        /* Скрытие скроллбара */
+        ::-webkit-scrollbar { width: 0; }
+
+        /* Анимация появления контента кнопок */
+        .btn-content-enter {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white antialiased overflow-x-hidden selection:bg-blue-500/30 pb-10">
+
+    <div class="bg-noise"></div>
+
+    <div id="toast-container" class="fixed top-6 left-0 right-0 z-[60] flex justify-center pointer-events-none transition-all duration-500 transform -translate-y-32 opacity-0 px-4">
+        <div id="toast-body" class="glass-panel bg-neutral-900/95 shadow-2xl rounded-2xl px-5 py-4 flex items-center gap-4 min-w-[310px] max-w-sm border-l-4">
+            <div id="toast-icon"></div>
+            <div>
+                <h4 id="toast-title" class="font-semibold text-[15px] text-white leading-tight"></h4>
+                <p id="toast-message" class="text-[13px] text-neutral-400 mt-0.5 leading-tight"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="sheet-backdrop" onclick="closeBottomSheet()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    
+    <div id="sheet-panel" class="fixed bottom-0 left-0 right-0 bg-[#121212] z-[80] rounded-t-[32px] border-t border-white/10 transform translate-y-full transition-transform duration-400 cubic-bezier(0.16, 1, 0.3, 1) p-6 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
+        <div class="w-12 h-1.5 bg-neutral-700 rounded-full mx-auto mb-8 opacity-50"></div>
+        
+        <div class="text-center mb-8">
+            <div id="sheet-icon" class="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center mx-auto mb-4 text-3xl">
+                ⚠️
+            </div>
+            <h3 id="sheet-title" class="text-xl font-bold text-white mb-2">Заголовок</h3>
+            <p id="sheet-desc" class="text-neutral-400 text-sm leading-relaxed px-4">Описание действия</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="closeBottomSheet()" class="w-full py-4 rounded-xl bg-neutral-800 text-neutral-300 font-medium hover:bg-neutral-700 transition-colors active-scale">
+                Отмена
+            </button>
+            <button id="sheet-confirm-btn" class="w-full py-4 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 transition-colors active-scale shadow-lg shadow-white/10">
+                Подтвердить
+            </button>
+        </div>
+    </div>
+
+    <header class="w-full glass-panel rounded-b-[2.5rem] pt-8 pb-8 px-5 relative overflow-hidden shadow-2xl shadow-black/40">
+        <div class="absolute top-0 right-0 w-80 h-80 bg-blue-600/15 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+        <div class="absolute top-20 left-0 w-60 h-60 bg-purple-600/10 rounded-full blur-[80px] -translate-x-1/2 pointer-events-none"></div>
+
+        <div class="max-w-2xl mx-auto relative z-10">
+            <div id="status-indicator" class="flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-white/5 w-fit border border-white/5 backdrop-blur-md transition-all duration-300">
+                <span class="relative flex h-2 w-2">
+                  <span id="status-dot-ping" class="absolute inline-flex h-full w-full rounded-full bg-neutral-400 opacity-75"></span>
+                  <span id="status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-neutral-500"></span>
+                </span>
+                <p id="status-text" class="text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">Загрузка...</p>
+            </div>
+            
+            <h1 class="text-[28px] font-bold text-white mb-1 tracking-tight leading-tight">
+                Иванов Иван
+            </h1>
+            <p class="text-base text-neutral-400 mb-8 font-mono opacity-80">
+                +7 999 888-77-66
+            </p>
+
+            <div class="h-[72px] relative"> <div id="action-start" class="absolute inset-0 w-full h-full transition-all duration-300 transform opacity-100 scale-100 origin-center">
+                    <button onclick="startSlot()" class="w-full h-full relative group overflow-hidden bg-custom-blue hover:bg-custom-blue-hover text-white font-semibold rounded-2xl shadow-lg shadow-blue-500/20 active-scale flex justify-center items-center gap-3 transition-all">
+                        <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                        <span class="text-lg">Начать смену</span>
+                        <svg class="w-5 h-5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    </button>
+                </div>
+
+                <div id="action-active" class="absolute inset-0 w-full h-full flex gap-3 transition-all duration-300 transform opacity-0 scale-95 pointer-events-none">
+                    
+                    <button onclick="window.location.href='#tasks'" class="flex-1 h-full bg-neutral-800 hover:bg-neutral-700 border border-white/10 text-white font-semibold rounded-2xl active-scale flex justify-center items-center gap-2 transition-all">
+                        <span>Перейти к задачам</span>
+                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+
+                    <button onclick="openBottomSheet('endSlot')" class="w-[72px] h-full flex-shrink-0 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 rounded-2xl active-scale flex justify-center items-center transition-all group shadow-glow-red">
+                        <svg class="w-7 h-7 group-hover:scale-110 transition-transform duration-300" fill="currentColor" viewBox="0 0 24 24">
+                           <path d="M13 2L3 14h9v8l10-12h-9z"></path>
+                        </svg>
+                    </button>
+
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    <main class="py-6 px-4 max-w-2xl mx-auto pb-24">
+        <div class="space-y-3">
+
+            <button class="w-full glass-panel p-4 rounded-2xl flex items-center justify-between group hover:bg-neutral-800/80 transition-all duration-200 active-scale">
+                <div class="flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                    <span class="text-[17px] font-medium text-neutral-200">Расписание</span>
+                </div>
+                <svg class="w-5 h-5 text-neutral-600 group-hover:text-white group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+            </button>
+
+            <button class="w-full glass-panel p-4 rounded-2xl flex items-center justify-between group hover:bg-neutral-800/80 transition-all duration-200 active-scale">
+                <div class="flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    </div>
+                    <span class="text-[17px] font-medium text-neutral-200">Статистика</span>
+                </div>
+                <svg class="w-5 h-5 text-neutral-600 group-hover:text-white group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+            </button>
+
+            <button onclick="openBottomSheet('logout')" class="w-full glass-panel p-4 rounded-2xl flex items-center justify-start group hover:bg-red-500/10 transition-all duration-200 active-scale mt-6 border-red-500/10 hover:border-red-500/30">
+                <div class="flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all duration-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    </div>
+                    <span class="text-[17px] font-medium text-red-400 group-hover:text-red-300">Выйти из аккаунта</span>
+                </div>
+            </button>
+
+        </div>
+    </main>
+
+    <script>
+        // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ***
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBQYQUq_485jOlnRDV2gonG_t3VmL4zKvYVbmSMgKJvV7zZpEjYJ6F0lo0kYqh4HEnOA/exec';
+
+        // --- СОСТОЯНИЕ ---
+        let isSlotActive = false;
+        let notificationTimeout;
+        let currentAction = null; // 'endSlot' или 'logout'
+
+        // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ С GOOGLE ТАБЛИЦЕЙ ---
+
+        /**
+         * Получает текущий статус смены при загрузке страницы.
+         */
+        async function fetchShiftStatus() {
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const status = data.shiftStatus;
+                    // Устанавливаем состояние в зависимости от полученного статуса
+                    setSlotState(status === 'Open', false); // false = не отправлять POST
+                } else {
+                    console.error("Error fetching status:", data.message);
+                    showToast("error", "Ошибка загрузки", "Не удалось получить статус смены.");
+                    setSlotState(false, false); // По умолчанию закрыта
+                }
+
+            } catch (error) {
+                console.error('Fetch error:', error);
+                showToast("error", "Ошибка сети", "Проблема с подключением к сервису статуса.");
+                setSlotState(false, false); // По умолчанию закрыта
+            }
+        }
+
+        /**
+         * Отправляет новый статус смены в Google Таблицу.
+         */
+        async function updateShiftStatus(newStatus) {
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' // Важно для GAS
+                    },
+                    body: JSON.stringify({ newStatus: newStatus })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    return true;
+                } else {
+                    console.error("Error updating status:", data.message);
+                    showToast("error", "Ошибка обновления", "Сервер вернул ошибку при обновлении статуса.");
+                    return false;
+                }
+
+            } catch (error) {
+                console.error('Update error:', error);
+                showToast("error", "Ошибка сети", "Не удалось отправить новый статус.");
+                return false;
+            }
+        }
+
+
+        // --- ЛОГИКА СМЕНЫ ---
+
+        async function startSlot() {
+            const success = await updateShiftStatus('Open');
+            if (success) {
+                setSlotState(true);
+                showToast("success", "Смена открыта", "Задачи уже ждут вас. Удачной работы!");
+            }
+        }
+
+        async function endSlot() {
+            const success = await updateShiftStatus('Closed');
+            if (success) {
+                setSlotState(false);
+                showToast("neutral", "Смена завершена", "Спасибо за работу! Данные сохранены.");
+                closeBottomSheet();
+            }
+        }
+
+        function setSlotState(active, updateIsSlotActive = true) {
+            // Флаг updateIsSlotActive нужен, чтобы избежать бесконечного цикла,
+            // когда мы просто подгружаем статус с сервера (fetchShiftStatus)
+            if (updateIsSlotActive) {
+                isSlotActive = active;
+            }
+            
+            const startBtn = document.getElementById('action-start');
+            const activeBtns = document.getElementById('action-active');
+            
+            const statusText = document.getElementById('status-text');
+            const statusDot = document.getElementById('status-dot');
+            const statusPing = document.getElementById('status-dot-ping');
+
+            if (active) {
+                // Скрываем кнопку старт
+                startBtn.classList.remove('opacity-100', 'scale-100');
+                startBtn.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                
+                // Показываем кнопки смены
+                setTimeout(() => {
+                    activeBtns.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                    activeBtns.classList.add('opacity-100', 'scale-100');
+                }, 100);
+
+                // Обновляем статус
+                statusText.textContent = "СМЕНА АКТИВНА";
+                statusText.classList.remove('text-neutral-400', 'text-red-400');
+                statusText.classList.add('text-green-400');
+                
+                statusDot.classList.remove('bg-neutral-500', 'bg-red-500');
+                statusDot.classList.add('bg-green-500');
+                
+                statusPing.classList.remove('bg-neutral-400', 'hidden', 'bg-red-400');
+                statusPing.classList.add('bg-green-400', 'animate-ping');
+            } else {
+                // Скрываем кнопки смены
+                activeBtns.classList.remove('opacity-100', 'scale-100');
+                activeBtns.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                
+                // Показываем кнопку старт
+                setTimeout(() => {
+                    startBtn.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                    startBtn.classList.add('opacity-100', 'scale-100');
+                }, 100);
+
+                // Обновляем статус
+                statusText.textContent = "СМЕНА ЗАКРЫТА";
+                statusText.classList.remove('text-green-400');
+                statusText.classList.add('text-neutral-400'); // Или text-red-400, как вам больше нравится
+
+                statusDot.classList.remove('bg-green-500');
+                statusDot.classList.add('bg-neutral-500');
+
+                statusPing.classList.remove('bg-green-400', 'animate-ping');
+                statusPing.classList.add('bg-neutral-400', 'hidden');
+            }
+        }
+
+        // --- ЛОГИКА BOTTOM SHEET (ШТОРКА) ---
+
+        function openBottomSheet(actionType) {
+            currentAction = actionType;
+            const backdrop = document.getElementById('sheet-backdrop');
+            const panel = document.getElementById('sheet-panel');
+            const title = document.getElementById('sheet-title');
+            const desc = document.getElementById('sheet-desc');
+            const confirmBtn = document.getElementById('sheet-confirm-btn');
+            const icon = document.getElementById('sheet-icon');
+
+            // Настройка контента в зависимости от действия
+            if (actionType === 'endSlot') {
+                title.textContent = "Завершить смену?";
+                desc.textContent = "Убедитесь, что вы закончили текущие задачи. После завершения вы перестанете получать новые заказы.";
+                confirmBtn.onclick = endSlot; // ВЫЗОВ ФУНКЦИИ СВЯЗИ
+                confirmBtn.textContent = "Да, завершить";
+                confirmBtn.className = "w-full py-4 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors active-scale shadow-lg shadow-red-500/20";
+                icon.innerHTML = '<svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>';
+                icon.className = "w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4";
+            } else if (actionType === 'logout') {
+                title.textContent = "Выйти из аккаунта?";
+                desc.textContent = "Вам придется заново ввести номер телефона для входа в приложение.";
+                confirmBtn.onclick = () => {
+                    closeBottomSheet();
+                    showToast("neutral", "Выход...", "Перенаправление на страницу входа");
+                    setTimeout(() => location.reload(), 1500);
+                };
+                confirmBtn.textContent = "Выйти";
+                confirmBtn.className = "w-full py-4 rounded-xl bg-white text-black font-bold hover:bg-neutral-200 transition-colors active-scale shadow-lg";
+                icon.innerHTML = '<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>';
+                icon.className = "w-16 h-16 rounded-full bg-neutral-700 flex items-center justify-center mx-auto mb-4";
+            }
+
+            // Показ шторки
+            backdrop.classList.remove('pointer-events-none', 'opacity-0');
+            backdrop.classList.add('opacity-100');
+            
+            panel.classList.remove('translate-y-full');
+            panel.classList.add('translate-y-0');
+        }
+
+        function closeBottomSheet() {
+            const backdrop = document.getElementById('sheet-backdrop');
+            const panel = document.getElementById('sheet-panel');
+
+            backdrop.classList.remove('opacity-100');
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+            
+            panel.classList.remove('translate-y-0');
+            panel.classList.add('translate-y-full');
+            
+            currentAction = null;
+        }
+
+        // --- ЛОГИКА TOAST (УВЕДОМЛЕНИЯ) ---
+
+        function showToast(type, title, message) {
+            const toastContainer = document.getElementById('toast-container');
+            const toastBody = document.getElementById('toast-body');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            // Сброс предыдущего
+            if (notificationTimeout) clearTimeout(notificationTimeout);
+
+            // Стили
+            if (type === 'success') {
+                toastBody.className = "glass-panel bg-[#0d140f]/95 shadow-2xl rounded-2xl px-5 py-4 flex items-center gap-4 min-w-[310px] max-w-sm border-l-4 border-green-500 backdrop-blur-xl";
+                toastIcon.innerHTML = '<div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>';
+            } else if (type === 'error') {
+                 toastBody.className = "glass-panel bg-[#150d0d]/95 shadow-2xl rounded-2xl px-5 py-4 flex items-center gap-4 min-w-[310px] max-w-sm border-l-4 border-red-500 backdrop-blur-xl";
+                toastIcon.innerHTML = '<div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center text-red-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.332 16c-.77 1.333.192 3 1.732 3z"/></svg></div>';
+            } else {
+                toastBody.className = "glass-panel bg-neutral-900/95 shadow-2xl rounded-2xl px-5 py-4 flex items-center gap-4 min-w-[310px] max-w-sm border-l-4 border-neutral-500 backdrop-blur-xl";
+                toastIcon.innerHTML = '<div class="w-10 h-10 rounded-full bg-neutral-500/20 flex items-center justify-center text-neutral-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>';
+            }
+
+            toastTitle.textContent = title;
+            toastMsg.textContent = message;
+
+            // Анимация показа
+            toastContainer.classList.remove('opacity-0', '-translate-y-32');
+            toastContainer.classList.add('opacity-100', 'translate-y-0');
+
+            // Анимация скрытия
+            notificationTimeout = setTimeout(() => {
+                toastContainer.classList.remove('opacity-100', 'translate-y-0');
+                toastContainer.classList.add('opacity-0', '-translate-y-32');
+            }, 4000);
+        }
+
+        // --- ИНИЦИАЛИЗАЦИЯ ---
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // Загружаем статус смены сразу при загрузке страницы
+            fetchShiftStatus(); 
+        });
+
+        // Защита от случайного копирования
+        document.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>
