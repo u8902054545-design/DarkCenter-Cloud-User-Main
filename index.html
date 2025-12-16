@@ -388,7 +388,7 @@
     <script>
         // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ***
         // Обновлен APPS_SCRIPT_URL
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOeuWyvFF5HMjzZEzO8fJ97Vuh-nsfvfm8LVnlKaTtOqo_ZQVa2J2Wb3-mcqscsvjV-KcA/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOeuWyvFF5HMjzZEzO8fJ97Vuh-nsfvfm8LVnlKaTtOqo_ZQVa2J2Wb3-mcSqvjV-KcA/exec';
         const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
         // Обновлен LOGOUT_URL на ваш URL авторизации
         const LOGOUT_URL = 'https://u8902054545-design.github.io/Auth-ITC-Platform/'; 
@@ -457,10 +457,9 @@
         /**
          * Проверяет токен и почту в localStorage с данными на сервере.
          * Если не совпадает или статус Inactive, перенаправляет на страницу авторизации.
-         * @param {boolean} [showLoader=true] - Если true, показывает оверлей и тост.
          */
-        async function checkUserAuthentication(showLoader = true) {
-            if (showLoader) showLoading(); 
+        async function checkUserAuthentication() {
+            showLoading(); 
             
             const email = localStorage.getItem('userEmail');
             const token = localStorage.getItem('authToken');
@@ -468,8 +467,7 @@
             // 1. Проверка локального хранилища
             if (!email || !token) {
                 console.warn("Аутентификация: Отсутствуют данные в LocalStorage. Перенаправление.");
-                // Не показываем тост, если нет данных вообще (самая первая загрузка)
-                redirectToAuth(showLoader); 
+                redirectToAuth();
                 return false; 
             }
             
@@ -498,44 +496,38 @@
                 if (data.status === 'success' && data.auth_ok) {
                     // Аутентификация успешна, устанавливаем данные пользователя
                     setUserInfo(data.user.fullName, data.user.email);
-                    if (showLoader) showToast("Авторизация", "Успешный вход.");
+                    showToast("Авторизация", "Успешный вход.");
                     return true;
                 } else {
                     // Аутентификация не пройдена (токен/email не совпал или статус 'Inactive')
                     console.warn(`Аутентификация: Сервер отклонил. Причина: ${data.message || 'Неизвестная ошибка.'}. Перенаправление.`);
-                    // Показываем ошибку и перенаправляем, ТОЛЬКО если это не фоновая проверка
-                    if (showLoader) {
-                        showToast("Внимание", data.message || 'Ошибка аутентификации. Перенаправление...');
-                    }
-                    redirectToAuth(showLoader);
+                    redirectToAuth(data.message);
                     return false;
                 }
 
             } catch (error) {
                 console.error('Fetch Auth error:', error);
-                if (showLoader) {
-                    showToast("Ошибка сети", "Не удалось связаться с сервером для проверки аутентификации.");
-                }
-                // При сетевой ошибке, мы считаем, что пользователь авторизован, но данные не обновились
-                // Это лучше, чем редирект в случае временных проблем с сетью
-                return true; 
+                showToast("Ошибка сети", "Не удалось связаться с сервером для проверки аутентификации.");
+                // При сетевой ошибке, лучше не перенаправлять сразу, чтобы дать пользователю возможность переподключиться.
+                return true; // Временно позволяем продолжить, но данные не обновятся
             } finally {
-                if (showLoader) hideLoading(); 
+                hideLoading(); 
             }
         }
         
         /**
          * Очищает локальное хранилище и перенаправляет пользователя.
-         * @param {boolean} showLoaderWasActive - Был ли активен лоадер в вызывающей функции (true для блокирующей проверки).
          */
-        function redirectToAuth(showLoaderWasActive) {
+        function redirectToAuth(message = "Перенаправление на страницу авторизации...") {
             localStorage.removeItem('userEmail');
             localStorage.removeItem('authToken');
             
-            // Если лоадер не был активен (т.е. это была фоновая проверка), включаем его при редиректе
-            if (!showLoaderWasActive) {
+            // Если мы уже показываем лоадер, не показываем тост
+            if (!loadingOverlay.classList.contains('visible')) {
                 showLoading();
             }
+            
+            showToast("Внимание", message);
             
             setTimeout(() => {
                 window.location.href = LOGOUT_URL; 
@@ -546,10 +538,9 @@
 
         /**
          * Выполняет запрос к серверу для получения текущего статуса смены.
-         * @param {boolean} [showLoader=true] - Если true, показывает оверлей и тост.
+         * ... (Остальной код fetchShiftStatus остается без изменений) ...
          */
         async function fetchShiftStatus(showLoader = true) {
-            // !!! ИЗМЕНЕНО: Проверяем, нужно ли показывать лоадер и тост
             if (showLoader) showLoading();
             
             try {
@@ -569,15 +560,12 @@
                     return data.shiftStatus;
                 } else {
                     console.error("Error fetching status:", data.message);
-                    if (showLoader) { // Только если это не фоновая проверка
-                        showToast("Ошибка получения", "Сервер вернул ошибку при запросе статуса.");
-                    }
                     return null;
                 }
 
             } catch (error) {
                 console.error('Fetch error:', error);
-                if (showLoader) { // Только если это не фоновая проверка
+                if (showLoader) {
                     showToast("Ошибка сети", "Не удалось получить статус смены.");
                 }
                 return null;
@@ -588,6 +576,7 @@
         
         /**
          * Отправляет новый статус смены в Google Таблицу.
+         * ... (Остальной код updateShiftStatus остается без изменений) ...
          */
         async function updateShiftStatus(newStatus) {
             showLoading(); 
@@ -626,7 +615,7 @@
         }
 
 
-        // --- ЛОГИКА СМЕНЫ ---
+        // --- ЛОГИКА СМЕНЫ (Без изменений) ---
 
         async function startSlot() {
             const success = await updateShiftStatus('Open');
@@ -682,8 +671,7 @@
         
         async function goToTasks() {
             showLoading();
-            // Используем fetchShiftStatus(false), чтобы не показывать фоновый тост, но лоадер сверху оставляем
-            const actualStatus = await fetchShiftStatus(false); 
+            const actualStatus = await fetchShiftStatus(false);
             hideLoading();
             
             if (actualStatus === 'Open') {
@@ -737,17 +725,17 @@
         }
 
 
-        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА ---
+        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА (Изменена confirmLogout) ---
         
         function showLogoutConfirmation() {
             const subtitleOpen = "Изменённые настройки не сбросятся, активные задачи и слот сохранятся";
-            const subtitleClosed = "При следующей авторизации, придётся ввести данные заново"; 
+            const subtitleClosed = "При следующей авторизации, придётся ввести данные заново"; // Изменено
             
             bsTitle.innerText = "Выйти из аккаунта?";
             bsSubtitle.innerText = isSlotActive ? subtitleOpen : subtitleClosed;
             
             bsConfirmBtn.innerText = "Выйти";
-            bsConfirmBtn.onclick = confirmLogout; 
+            bsConfirmBtn.onclick = confirmLogout; // Вызовет новую функцию
             bsConfirmBtn.className = "bg-red-600 text-white text-base font-semibold rounded-xl shadow-lg hover:bg-red-700 transition duration-150 active:scale-[0.99] py-3 px-4";
 
             bsCancelBtn.innerText = "Не выходить";
@@ -757,12 +745,11 @@
         }
 
         /**
-         * Очищает хранилище и перенаправляет.
+         * Новая функция: очищает хранилище и перенаправляет.
          */
         function confirmLogout() {
             hideBottomSheet();
-            // Вызываем редирект с лоадером (блокирующая проверка)
-            redirectToAuth(true); 
+            redirectToAuth("Выход...");
         }
 
         // --- ЛОГИКА TOAST (Без изменений) ---
@@ -836,15 +823,15 @@
         
         document.addEventListener('DOMContentLoaded', async () => {
             // 1. ПЕРВАЯ И КРИТИЧЕСКАЯ ПРОВЕРКА: АУТЕНТИФИКАЦИЯ
-            // showLoader = true, БЛОКИРУЕМ экран при первой загрузке
-            const isAuthenticated = await checkUserAuthentication(true); 
+            const isAuthenticated = await checkUserAuthentication();
             
             if (!isAuthenticated) {
+                // Если аутентификация не пройдена, дальнейшая загрузка статуса не требуется, 
+                // так как функция checkUserAuthentication уже инициировала редирект.
                 return;
             }
 
-            // 2. Загружаем статус смены (showLoader = true)
-            // Продолжаем блокировать экран до получения статуса
+            // 2. Загружаем статус смены только после успешной аутентификации
             const initialStatus = await fetchShiftStatus(true); 
             if (initialStatus) {
                 setSlotState(initialStatus === 'Open', false);
@@ -854,11 +841,10 @@
             
             // 3. Настраиваем регулярное обновление статуса
             setInterval(async () => {
-                // ФОНОВАЯ ПРОВЕРКА: showLoader = false
-                const isStillAuthenticated = await checkUserAuthentication(false);
+                // Перед обновлением статуса, убедимся, что пользователь все еще авторизован
+                const isStillAuthenticated = await checkUserAuthentication();
                 
                 if (isStillAuthenticated) {
-                    // ФОНОВАЯ ПРОВЕРКА: showLoader = false
                     const status = await fetchShiftStatus(false); 
                     if (status) {
                          setSlotState(status === 'Open', true);
@@ -872,4 +858,4 @@
     </script>
     
 </body>
-  </html>
+</html>
