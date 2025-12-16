@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DarkCenter Cloud User Main</title>
+    <title>Личный Кабинет</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -278,6 +278,9 @@
         let isSlotActive = false;
         let notificationTimeout;
         let currentAction = null; 
+        
+        // !!! КОНСТАНТА ССЫЛКИ НА ЗАДАЧИ !!!
+        const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
 
         // --- ГЛОБАЛЬНЫЕ ФУНКЦИИ ЗАГРУЗКИ ---
         function showLoading() {
@@ -378,7 +381,7 @@
         }
 
 
-        // --- ЛОГИКА СМЕНЫ И НАВИГАЦИИ ---
+        // --- ЛОГИКА СМЕНЫ ---
 
         async function startSlot() {
             const success = await updateShiftStatus('Open');
@@ -396,19 +399,22 @@
                 closeBottomSheet();
             }
         }
-
+        
         /**
-         * Проверяет, открыта ли смена, и перенаправляет пользователя к задачам.
+         * Проверяет, открыта ли смена, и перенаправляет на страницу задач.
          */
         function goToTasks() {
             if (isSlotActive) {
-                // Если смена открыта, переходим по ссылке
-                window.location.href = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
+                showToast("neutral", "Переход", "Перенаправление на страницу задач...");
+                // Используем небольшую задержку, чтобы пользователь увидел Toast
+                setTimeout(() => {
+                    window.location.href = TASKS_URL;
+                }, 500); 
             } else {
-                // Если смена закрыта, предупреждаем пользователя
-                showToast("error", "Смена неактивна", "Сначала необходимо нажать 'Начать смену'.");
+                showToast("error", "Смена закрыта", "Для перехода к задачам необходимо сначала начать смену.");
             }
         }
+        // !!! КОНЕЦ ДОБАВЛЕННОЙ ФУНКЦИИ !!!
 
         /**
          * Обновляет состояние и внешний вид интерфейса.
@@ -473,6 +479,8 @@
         }
 
         // --- ЛОГИКА BOTTOM SHEET (ШТОРКА) ---
+        // (Остальной код функций openBottomSheet, closeBottomSheet, showToast остается без изменений, 
+        // так как они не используют асинхронные запросы напрямую)
 
         function openBottomSheet(actionType) {
             currentAction = actionType;
