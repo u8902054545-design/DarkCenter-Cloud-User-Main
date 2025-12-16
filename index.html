@@ -28,7 +28,7 @@
         /* Стили из Файла 1 */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0F0F0F; 
+            background-color: #0F0F0F; /* Основной темный фон */
             padding: 0;
             margin: 0;
             user-select: none; 
@@ -188,7 +188,7 @@
         #loadingOverlay.visible {
             opacity: 1;
             visibility: visible;
-            pointer-events: auto; 
+            pointer-events: auto; /* Блокируем клики под оверлеем */
         }
         /* ----------------------------------------------------------------- */
     </style>
@@ -207,12 +207,12 @@
                 Нет подтверждённых слотов
             </p>
             
-            <h1 class="text-base font-normal text-gray-400 mb-0.5 text-left" id="userName">
-                Иванов Иван
+            <h1 id="user-full-name" class="text-base font-normal text-gray-400 mb-0.5 text-left">
+                Загрузка имени...
             </h1>
             
-            <p class="text-base font-normal text-gray-400 text-left" id="userEmail">
-                +7 999 888-77-66
+            <p id="user-contact" class="text-base font-normal text-gray-400 text-left">
+                Загрузка контакта...
             </p>
 
             <div id="info-message" class="mt-4 p-3 flex items-start gap-3 bg-yellow-900/20 border border-yellow-600/30 rounded-2xl">
@@ -386,17 +386,14 @@
     </div>
 
     <script>
-        // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT (ОБНОВЛЕННЫЙ URL) ***
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsXFWQpton0ICNydgH0K2xW9RzsqIqb8aDDit6A_oZU-D6ulFAQkRQ3lciIIsHjJYXXg/exec';
+        // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ***
+        // Обновлен APPS_SCRIPT_URL
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOeuWyvFF5HMjzZEzO8fJ97Vuh-nsfvfm8LVnlKaTtOqo_ZQVa2J2Wb3-mcSqvjV-KcA/exec';
         const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
-        const LOGOUT_URL = 'https://u8902054545-design.github.io/Auth-ITC-Platform/'; // НОВАЯ СТРАНИЦА АВТОРИЗАЦИИ
+        // Обновлен LOGOUT_URL на ваш URL авторизации
+        const LOGOUT_URL = 'https://u8902054545-design.github.io/Auth-ITC-Platform/'; 
         const BOTTOM_SHEET_ANIMATION_DURATION = 300; 
         const INTERVAL_MS = 3000; // Интервал в миллисекундах (3 секунды)
-
-        // --- КЛЮЧИ ЛОКАЛЬНОГО ХРАНИЛИЩА ---
-        const TOKEN_KEY = 'userTokenKey';
-        const EMAIL_KEY = 'userEmailKey';
-        // -----------------------------------
 
         // --- СОСТОЯНИЕ ---
         let isSlotActive = false;
@@ -409,10 +406,9 @@
         const closeSlotBtn = document.getElementById('close-slot-btn');
         const mainBtnIconPath = document.getElementById('main-btn-icon-path'); 
         
-        // !!! НОВЫЕ ЭЛЕМЕНТЫ ДЛЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ !!!
-        const userNameElement = document.getElementById('userName'); 
-        const userEmailElement = document.getElementById('userEmail');
-        // -----------------------------------------------
+        // Новые элементы для отображения данных пользователя
+        const userFullNameEl = document.getElementById('user-full-name');
+        const userContactEl = document.getElementById('user-contact');
 
         // Элементы Bottom Sheet
         const bottomSheet = document.getElementById('bottom-sheet');
@@ -446,53 +442,36 @@
         }
         // ------------------------------------
         
-        // --- ЛОГИКА АВТОРИЗАЦИИ И ПРОВЕРКИ (НОВЫЙ БЛОК) ---
-
         /**
-         * Читает токен и email из localStorage.
-         * @returns {{token: string|null, email: string|null}} 
+         * Устанавливает имя и контакт пользователя в заголовок.
+         * @param {string} fullName - Полное имя пользователя.
+         * @param {string} email - Адрес электронной почты.
          */
-        function getAuthData() {
-            const token = localStorage.getItem(TOKEN_KEY);
-            const email = localStorage.getItem(EMAIL_KEY);
-            return { token, email };
+        function setUserInfo(fullName, email) {
+            userFullNameEl.textContent = fullName;
+            userContactEl.textContent = email; // Отображаем Email вместо телефона
         }
+
+        // --- ЛОГИКА АУТЕНТИФИКАЦИИ ---
         
         /**
-         * Перенаправляет на страницу авторизации и очищает данные.
-         */
-        function redirectToAuth(reason = "Не авторизован") {
-            console.warn(`Перенаправление на страницу авторизации. Причина: ${reason}`);
-            showLoading();
-            
-            // Очистка данных, чтобы избежать циклической переадресации
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(EMAIL_KEY);
-
-            // Задержка для отображения лоадера и анимации
-            setTimeout(() => {
-                window.location.href = LOGOUT_URL;
-            }, 500); 
-        }
-
-        /**
-         * Проверяет токен и статус пользователя на сервере.
-         * Вызывается при загрузке страницы и в интервале.
-         * @returns {Promise<boolean>} true, если аутентификация прошла успешно.
+         * Проверяет токен и почту в localStorage с данными на сервере.
+         * Если не совпадает или статус Inactive, перенаправляет на страницу авторизации.
          */
         async function checkUserAuthentication() {
-            // Не показываем лоадер, если это фоновая проверка
-            const isInitialCheck = !userNameElement.textContent.includes('@'); 
-            if (isInitialCheck) showLoading();
-
-            const { token, email } = getAuthData();
-
-            // 1. Проверка наличия данных в Local Storage
-            if (!token || !email) {
-                redirectToAuth("Данные в Local Storage отсутствуют.");
-                return false;
+            showLoading(); 
+            
+            const email = localStorage.getItem('userEmail');
+            const token = localStorage.getItem('authToken');
+            
+            // 1. Проверка локального хранилища
+            if (!email || !token) {
+                console.warn("Аутентификация: Отсутствуют данные в LocalStorage. Перенаправление.");
+                redirectToAuth();
+                return false; 
             }
-
+            
+            // 2. Отправка данных на сервер для проверки
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
@@ -502,9 +481,9 @@
                         'Content-Type': 'text/plain;charset=utf-8' 
                     },
                     body: JSON.stringify({ 
-                        action: 'checkUserAuth', 
-                        userEmail: email,
-                        userToken: token
+                        auth: true, 
+                        email: email, 
+                        token: token 
                     })
                 });
 
@@ -514,49 +493,55 @@
 
                 const data = await response.json();
                 
-                if (data.status === 'success' && data.action === 'checkUserAuth') {
-                    
-                    if (data.isAuthenticated) {
-                        // 2. Аутентификация успешна. Отображаем данные пользователя.
-                        const user = data.user;
-                        if (userNameElement) userNameElement.textContent = user.fullName || 'Пользователь';
-                        // Отображаем Email вместо номера телефона, как требуется
-                        if (userEmailElement) userEmailElement.textContent = user.email || 'Нет данных';
-                        
-                        if (isInitialCheck) hideLoading();
-                        return true; 
-                    } else {
-                        // 3. Аутентификация провалена (токен не совпал или статус 'Inactive')
-                        redirectToAuth("Ошибка аутентификации или неактивный статус.");
-                        return false;
-                    }
-
+                if (data.status === 'success' && data.auth_ok) {
+                    // Аутентификация успешна, устанавливаем данные пользователя
+                    setUserInfo(data.user.fullName, data.user.email);
+                    showToast("Авторизация", "Успешный вход.");
+                    return true;
                 } else {
-                    // Сервер вернул ошибку или неверный формат
-                    throw new Error("Некорректный ответ от сервера.");
+                    // Аутентификация не пройдена (токен/email не совпал или статус 'Inactive')
+                    console.warn(`Аутентификация: Сервер отклонил. Причина: ${data.message || 'Неизвестная ошибка.'}. Перенаправление.`);
+                    redirectToAuth(data.message);
+                    return false;
                 }
 
             } catch (error) {
-                console.error('Check Auth Error:', error);
-                if (isInitialCheck) {
-                     showToast("Ошибка сервера", "Не удалось проверить статус авторизации.");
-                }
-                redirectToAuth("Ошибка связи с сервером.");
-                return false;
+                console.error('Fetch Auth error:', error);
+                showToast("Ошибка сети", "Не удалось связаться с сервером для проверки аутентификации.");
+                // При сетевой ошибке, лучше не перенаправлять сразу, чтобы дать пользователю возможность переподключиться.
+                return true; // Временно позволяем продолжить, но данные не обновятся
+            } finally {
+                hideLoading(); 
             }
         }
         
+        /**
+         * Очищает локальное хранилище и перенаправляет пользователя.
+         */
+        function redirectToAuth(message = "Перенаправление на страницу авторизации...") {
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('authToken');
+            
+            // Если мы уже показываем лоадер, не показываем тост
+            if (!loadingOverlay.classList.contains('visible')) {
+                showLoading();
+            }
+            
+            showToast("Внимание", message);
+            
+            setTimeout(() => {
+                window.location.href = LOGOUT_URL; 
+            }, 1000); 
+        }
+
         // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ С GOOGLE ТАБЛИЦЕЙ (СТАТУС СМЕНЫ) ---
 
         /**
          * Выполняет запрос к серверу для получения текущего статуса смены.
-         * (Оставлена как GET для совместимости со старыми запросами)
-         * @param {boolean} showLoader - Показывать ли спиннер при запросе.
-         * @returns {Promise<string|null>} 'Open', 'Closed', или null в случае ошибки.
+         * ... (Остальной код fetchShiftStatus остается без изменений) ...
          */
         async function fetchShiftStatus(showLoader = true) {
-            // Вызов showLoading/hideLoading удален, так как это делает checkUserAuthentication
-            // или главная функция DOMContentLoaded.
+            if (showLoader) showLoading();
             
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
@@ -584,14 +569,17 @@
                     showToast("Ошибка сети", "Не удалось получить статус смены.");
                 }
                 return null;
-            } 
+            } finally {
+                if (showLoader) hideLoading(); 
+            }
         }
         
         /**
          * Отправляет новый статус смены в Google Таблицу.
+         * ... (Остальной код updateShiftStatus остается без изменений) ...
          */
         async function updateShiftStatus(newStatus) {
-            showLoading(); // Показываем спиннер при активном действии пользователя
+            showLoading(); 
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
@@ -600,10 +588,7 @@
                     headers: {
                         'Content-Type': 'text/plain;charset=utf-8' 
                     },
-                    body: JSON.stringify({ 
-                        action: 'updateShiftStatus', // Добавляем action
-                        newStatus: newStatus 
-                    })
+                    body: JSON.stringify({ newStatus: newStatus })
                 });
 
                 if (!response.ok) {
@@ -625,12 +610,12 @@
                 showToast("Ошибка сети", "Не удалось отправить новый статус. Проверьте соединение.");
                 return false;
             } finally {
-                hideLoading(); // Скрываем оверлей всегда
+                hideLoading(); 
             }
         }
 
 
-        // --- ЛОГИКА СМЕНЫ ---
+        // --- ЛОГИКА СМЕНЫ (Без изменений) ---
 
         async function startSlot() {
             const success = await updateShiftStatus('Open');
@@ -649,18 +634,12 @@
             }
         }
 
-        /**
-         * Обновляет состояние и внешний вид интерфейса.
-         * @param {boolean} active - true для Open, false для Closed.
-         * @param {boolean} updateIsSlotActive - Должны ли мы обновить глобальную переменную isSlotActive.
-         */
         function setSlotState(active, updateIsSlotActive = true) {
             if (updateIsSlotActive) {
                 isSlotActive = active;
             }
             
             if (active) {
-                // Слот активен
                 statusIndicator.textContent = "Слот активен";
                 statusIndicator.classList.add('text-green-400');
                 statusIndicator.classList.remove('text-white');
@@ -675,7 +654,6 @@
                 document.getElementById('main-action-btn').onclick = goToTasks;
 
             } else {
-                // Слот закрыт
                 statusIndicator.textContent = "Нет подтверждённых слотов";
                 statusIndicator.classList.add('text-white');
                 statusIndicator.classList.remove('text-green-400');
@@ -691,9 +669,6 @@
             }
         }
         
-        /**
-         * Переход к задачам (проверяем статус перед переходом)
-         */
         async function goToTasks() {
             showLoading();
             const actualStatus = await fetchShiftStatus(false);
@@ -710,20 +685,15 @@
             }
         }
 
-        /**
-         * Функция запуска/перехода к задачам (срабатывает при нажатии на синюю кнопку)
-         */
         function toggleSlot() {
             if (!isSlotActive) {
-                // Запуск слота (Обращение к серверу)
                 startSlot();
             } else {
-                // Логика кнопки "Перейти к задачам"
                 goToTasks();
             }
         }
         
-        // --- ЛОГИКА BOTTOM SHEET ---
+        // --- ЛОГИКА BOTTOM SHEET (Без изменений) ---
 
         function showBottomSheet() {
             bottomSheetOverlay.classList.add('active');
@@ -736,7 +706,7 @@
         }
 
 
-        // --- ЛОГИКА ПОДТВЕРЖДЕНИЯ ЗАКРЫТИЯ СЛОТА ---
+        // --- ЛОГИКА ПОДТВЕРЖДЕНИЯ ЗАКРЫТИЯ СЛОТА (Без изменений) ---
 
         function showStopSlotConfirmation() {
             if (!isSlotActive) return; 
@@ -744,12 +714,10 @@
             bsTitle.innerText = "Завершить слот?";
             bsSubtitle.innerText = "Убедитесь, что вы закончили текущие задачи. После завершения вы перестанете получать новые заказы.";
             
-            // Кнопка подтверждения
             bsConfirmBtn.innerText = "Да, завершить";
             bsConfirmBtn.onclick = endSlot; 
             bsConfirmBtn.className = "bg-red-600 text-white text-base font-semibold rounded-xl shadow-lg hover:bg-red-700 transition duration-150 active:scale-[0.99] py-3 px-4";
 
-            // Кнопка отмены
             bsCancelBtn.innerText = "Отмена";
             bsCancelBtn.className = "border-2 border-custom-blue text-custom-blue text-base font-semibold rounded-xl hover:bg-blue-900/10 transition duration-150 active:scale-[0.99] py-3 px-4";
             
@@ -757,53 +725,41 @@
         }
 
 
-        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА ---
+        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА (Изменена confirmLogout) ---
         
         function showLogoutConfirmation() {
             const subtitleOpen = "Изменённые настройки не сбросятся, активные задачи и слот сохранятся";
-            const subtitleClosed = "При следующей авторизации, придётся ввести номер телефона заново";
-
+            const subtitleClosed = "При следующей авторизации, придётся ввести данные заново"; // Изменено
+            
             bsTitle.innerText = "Выйти из аккаунта?";
             bsSubtitle.innerText = isSlotActive ? subtitleOpen : subtitleClosed;
             
-            // Кнопка подтверждения
             bsConfirmBtn.innerText = "Выйти";
-            bsConfirmBtn.onclick = confirmLogout;
+            bsConfirmBtn.onclick = confirmLogout; // Вызовет новую функцию
             bsConfirmBtn.className = "bg-red-600 text-white text-base font-semibold rounded-xl shadow-lg hover:bg-red-700 transition duration-150 active:scale-[0.99] py-3 px-4";
 
-            // Кнопка отмены
             bsCancelBtn.innerText = "Не выходить";
             bsCancelBtn.className = "border-2 border-custom-blue text-custom-blue text-base font-semibold rounded-xl hover:bg-blue-900/10 transition duration-150 active:scale-[0.99] py-3 px-4";
 
             showBottomSheet();
         }
 
+        /**
+         * Новая функция: очищает хранилище и перенаправляет.
+         */
         function confirmLogout() {
             hideBottomSheet();
-            showToast("Выход...", "Перенаправление на страницу входа");
-            
-            // Очищаем Local Storage перед выходом
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(EMAIL_KEY);
-            
-            setTimeout(() => {
-                window.location.href = LOGOUT_URL; 
-            }, BOTTOM_SHEET_ANIMATION_DURATION); 
+            redirectToAuth("Выход...");
         }
 
-        // --- ЛОГИКА TOAST ---
+        // --- ЛОГИКА TOAST (Без изменений) ---
         
-        /**
-         * Показывает всплывающее уведомление.
-         * @param {string} title - Заголовок.
-         * @param {string} message - Сообщение.
-         */
         function showToast(title, message) {
             
             const toast = document.createElement('div');
             
-            const isSuccess = title.includes("активна") || title.includes("открыта");
-            const isError = title.includes("Ошибка") || title.includes("закрыта") || title.includes("Выход");
+            const isSuccess = title.includes("активна") || title.includes("открыта") || title.includes("Успешный");
+            const isError = title.includes("Ошибка") || title.includes("закрыта") || title.includes("Внимание");
             
             let bgClass = isSuccess ? 'bg-green-600/10 border-green-500/30' : 
                           isError ? 'bg-red-600/10 border-red-500/30' : 
@@ -863,20 +819,19 @@
             notificationTimeout = setTimeout(removeToast, 4000);
         }
 
-        // --- ИНИЦИАЛИЗАЦИЯ И АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ (ОБНОВЛЕННЫЙ БЛОК) ---
+        // --- ИНИЦИАЛИЗАЦИЯ И АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ ---
         
         document.addEventListener('DOMContentLoaded', async () => {
-            
-            // 1. --- ГЛАВНАЯ ПРОВЕРКА АВТОРИЗАЦИИ ---
-            // Проверяем токен и статус. Если не проходит, перенаправляет.
+            // 1. ПЕРВАЯ И КРИТИЧЕСКАЯ ПРОВЕРКА: АУТЕНТИФИКАЦИЯ
             const isAuthenticated = await checkUserAuthentication();
             
             if (!isAuthenticated) {
-                return; // Остановка выполнения, если аутентификация не пройдена
+                // Если аутентификация не пройдена, дальнейшая загрузка статуса не требуется, 
+                // так как функция checkUserAuthentication уже инициировала редирект.
+                return;
             }
-            // --------------------------------------
 
-            // 2. Загружаем статус смены сразу после успешной авторизации
+            // 2. Загружаем статус смены только после успешной аутентификации
             const initialStatus = await fetchShiftStatus(true); 
             if (initialStatus) {
                 setSlotState(initialStatus === 'Open', false);
@@ -884,18 +839,16 @@
                 setSlotState(false, false); 
             }
             
-            // 3. Настраиваем регулярное обновление
+            // 3. Настраиваем регулярное обновление статуса
             setInterval(async () => {
-                // Быстро проверяем, не был ли пользователь деактивирован, 
-                // если проверка не прошла, функция сама перенаправит.
-                const stillAuthenticated = await checkUserAuthentication(); 
-                if (!stillAuthenticated) {
-                    return; 
-                }
+                // Перед обновлением статуса, убедимся, что пользователь все еще авторизован
+                const isStillAuthenticated = await checkUserAuthentication();
                 
-                const status = await fetchShiftStatus(false); 
-                if (status) {
-                     setSlotState(status === 'Open', true);
+                if (isStillAuthenticated) {
+                    const status = await fetchShiftStatus(false); 
+                    if (status) {
+                         setSlotState(status === 'Open', true);
+                    }
                 }
             }, INTERVAL_MS);
             
@@ -905,4 +858,4 @@
     </script>
     
 </body>
-</html>
+    </html>
