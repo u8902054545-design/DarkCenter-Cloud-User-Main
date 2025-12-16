@@ -49,7 +49,7 @@
             -webkit-tap-highlight-color: transparent;
             user-select: none;
             -webkit-user-select: none;
-            overscroll-behavior-y: none; /* Предотвращает оттягивание страницы на iOS */
+            overscroll-behavior-y: none;
         }
 
         /* Текстура шума */
@@ -201,12 +201,13 @@
 
     <script>
         // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ***
+        // Убедитесь, что это ваш актуальный URL развертывания
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBQYQUq_485jOlnRDV2gonG_t3VmL4zKvYVbmSMgKJvV7zZpEjYJ6F0lo0kYqh4HEnOA/exec';
 
         // --- СОСТОЯНИЕ ---
         let isSlotActive = false;
         let notificationTimeout;
-        let currentAction = null; // 'endSlot' или 'logout'
+        let currentAction = null; 
 
         // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ С GOOGLE ТАБЛИЦЕЙ ---
 
@@ -229,18 +230,17 @@
                 
                 if (data.status === 'success') {
                     const status = data.shiftStatus;
-                    // Устанавливаем состояние в зависимости от полученного статуса
-                    setSlotState(status === 'Open', false); // false = не отправлять POST
+                    // Устанавливаем состояние в зависимости от полученного статуса.
+                    // Второй аргумент 'false' означает, что это чтение статуса, а не активное действие пользователя.
+                    setSlotState(status === 'Open', false);
                 } else {
                     console.error("Error fetching status:", data.message);
-                    showToast("error", "Ошибка загрузки", "Не удалось получить статус смены.");
-                    setSlotState(false, false); // По умолчанию закрыта
+                    // Ошибка загрузки не должна влиять на isSlotActive, пока не будет явного действия
                 }
 
             } catch (error) {
                 console.error('Fetch error:', error);
-                showToast("error", "Ошибка сети", "Проблема с подключением к сервису статуса.");
-                setSlotState(false, false); // По умолчанию закрыта
+                // Ошибка сети не должна влиять на isSlotActive, пока не будет явного действия
             }
         }
 
@@ -275,7 +275,7 @@
 
             } catch (error) {
                 console.error('Update error:', error);
-                showToast("error", "Ошибка сети", "Не удалось отправить новый статус.");
+                showToast("error", "Ошибка сети", "Не удалось отправить новый статус. Проверьте соединение.");
                 return false;
             }
         }
@@ -300,9 +300,12 @@
             }
         }
 
+        /**
+         * Обновляет состояние и внешний вид интерфейса.
+         * @param {boolean} active - true для Open, false для Closed.
+         * @param {boolean} updateIsSlotActive - Должны ли мы обновить глобальную переменную isSlotActive (true для кликов, false для автоматической загрузки).
+         */
         function setSlotState(active, updateIsSlotActive = true) {
-            // Флаг updateIsSlotActive нужен, чтобы избежать бесконечного цикла,
-            // когда мы просто подгружаем статус с сервера (fetchShiftStatus)
             if (updateIsSlotActive) {
                 isSlotActive = active;
             }
@@ -349,7 +352,7 @@
                 // Обновляем статус
                 statusText.textContent = "СМЕНА ЗАКРЫТА";
                 statusText.classList.remove('text-green-400');
-                statusText.classList.add('text-neutral-400'); // Или text-red-400, как вам больше нравится
+                statusText.classList.add('text-neutral-400'); 
 
                 statusDot.classList.remove('bg-green-500');
                 statusDot.classList.add('bg-neutral-500');
@@ -374,7 +377,7 @@
             if (actionType === 'endSlot') {
                 title.textContent = "Завершить смену?";
                 desc.textContent = "Убедитесь, что вы закончили текущие задачи. После завершения вы перестанете получать новые заказы.";
-                confirmBtn.onclick = endSlot; // ВЫЗОВ ФУНКЦИИ СВЯЗИ
+                confirmBtn.onclick = endSlot;
                 confirmBtn.textContent = "Да, завершить";
                 confirmBtn.className = "w-full py-4 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors active-scale shadow-lg shadow-red-500/20";
                 icon.innerHTML = '<svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>';
@@ -452,14 +455,19 @@
             }, 4000);
         }
 
-        // --- ИНИЦИАЛИЗАЦИЯ ---
+        // --- ИНИЦИАЛИЗАЦИЯ И АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ ---
+        const INTERVAL_MS = 3000; // Интервал в миллисекундах (3 секунды)
+        
         document.addEventListener('DOMContentLoaded', (event) => {
-            // Загружаем статус смены сразу при загрузке страницы
+            // 1. Загружаем статус смены сразу при загрузке страницы
             fetchShiftStatus(); 
+            
+            // 2. Настраиваем регулярное обновление статуса
+            setInterval(fetchShiftStatus, INTERVAL_MS);
+            
+            // Защита от случайного копирования
+            document.addEventListener('contextmenu', e => e.preventDefault());
         });
-
-        // Защита от случайного копирования
-        document.addEventListener('contextmenu', e => e.preventDefault());
     </script>
 </body>
 </html>
