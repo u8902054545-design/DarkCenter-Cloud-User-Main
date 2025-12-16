@@ -457,7 +457,7 @@
         /**
          * Проверяет токен и почту в localStorage с данными на сервере.
          * Если не совпадает или статус Inactive, перенаправляет на страницу авторизации.
-         * @param {boolean} showLoader - Если true, показывает оверлей и тост.
+         * @param {boolean} [showLoader=true] - Если true, показывает оверлей и тост.
          */
         async function checkUserAuthentication(showLoader = true) {
             if (showLoader) showLoading(); 
@@ -468,7 +468,8 @@
             // 1. Проверка локального хранилища
             if (!email || !token) {
                 console.warn("Аутентификация: Отсутствуют данные в LocalStorage. Перенаправление.");
-                redirectToAuth(showLoader); // Передаем showLoader
+                // Не показываем тост, если нет данных вообще (самая первая загрузка)
+                redirectToAuth(showLoader); 
                 return false; 
             }
             
@@ -502,7 +503,7 @@
                 } else {
                     // Аутентификация не пройдена (токен/email не совпал или статус 'Inactive')
                     console.warn(`Аутентификация: Сервер отклонил. Причина: ${data.message || 'Неизвестная ошибка.'}. Перенаправление.`);
-                    // Показываем ошибку и перенаправляем, если это не фоновая проверка
+                    // Показываем ошибку и перенаправляем, ТОЛЬКО если это не фоновая проверка
                     if (showLoader) {
                         showToast("Внимание", data.message || 'Ошибка аутентификации. Перенаправление...');
                     }
@@ -516,6 +517,7 @@
                     showToast("Ошибка сети", "Не удалось связаться с сервером для проверки аутентификации.");
                 }
                 // При сетевой ошибке, мы считаем, что пользователь авторизован, но данные не обновились
+                // Это лучше, чем редирект в случае временных проблем с сетью
                 return true; 
             } finally {
                 if (showLoader) hideLoading(); 
@@ -524,13 +526,13 @@
         
         /**
          * Очищает локальное хранилище и перенаправляет пользователя.
-         * @param {boolean} showLoaderWasActive - Был ли активен лоадер в вызывающей функции.
+         * @param {boolean} showLoaderWasActive - Был ли активен лоадер в вызывающей функции (true для блокирующей проверки).
          */
-        function redirectToAuth(showLoaderWasActive = true) {
+        function redirectToAuth(showLoaderWasActive) {
             localStorage.removeItem('userEmail');
             localStorage.removeItem('authToken');
             
-            // Если лоадер не был активен, включаем его при редиректе
+            // Если лоадер не был активен (т.е. это была фоновая проверка), включаем его при редиректе
             if (!showLoaderWasActive) {
                 showLoading();
             }
@@ -544,9 +546,10 @@
 
         /**
          * Выполняет запрос к серверу для получения текущего статуса смены.
-         * @param {boolean} showLoader - Если true, показывает оверлей и тост.
+         * @param {boolean} [showLoader=true] - Если true, показывает оверлей и тост.
          */
         async function fetchShiftStatus(showLoader = true) {
+            // !!! ИЗМЕНЕНО: Проверяем, нужно ли показывать лоадер и тост
             if (showLoader) showLoading();
             
             try {
@@ -566,7 +569,7 @@
                     return data.shiftStatus;
                 } else {
                     console.error("Error fetching status:", data.message);
-                    if (showLoader) {
+                    if (showLoader) { // Только если это не фоновая проверка
                         showToast("Ошибка получения", "Сервер вернул ошибку при запросе статуса.");
                     }
                     return null;
@@ -574,7 +577,7 @@
 
             } catch (error) {
                 console.error('Fetch error:', error);
-                if (showLoader) {
+                if (showLoader) { // Только если это не фоновая проверка
                     showToast("Ошибка сети", "Не удалось получить статус смены.");
                 }
                 return null;
@@ -623,7 +626,7 @@
         }
 
 
-        // --- ЛОГИКА СМЕНЫ (Без изменений) ---
+        // --- ЛОГИКА СМЕНЫ ---
 
         async function startSlot() {
             const success = await updateShiftStatus('Open');
@@ -734,7 +737,7 @@
         }
 
 
-        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА (Изменена confirmLogout) ---
+        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА ---
         
         function showLogoutConfirmation() {
             const subtitleOpen = "Изменённые настройки не сбросятся, активные задачи и слот сохранятся";
@@ -758,7 +761,7 @@
          */
         function confirmLogout() {
             hideBottomSheet();
-            // Вызываем редирект с лоадером
+            // Вызываем редирект с лоадером (блокирующая проверка)
             redirectToAuth(true); 
         }
 
@@ -833,15 +836,16 @@
         
         document.addEventListener('DOMContentLoaded', async () => {
             // 1. ПЕРВАЯ И КРИТИЧЕСКАЯ ПРОВЕРКА: АУТЕНТИФИКАЦИЯ
-            // Вызываем БЕЗ параметра, то есть showLoader = true (блокируем экран при первой загрузке)
-            const isAuthenticated = await checkUserAuthentication();
+            // showLoader = true, БЛОКИРУЕМ экран при первой загрузке
+            const isAuthenticated = await checkUserAuthentication(true); 
             
             if (!isAuthenticated) {
                 return;
             }
 
             // 2. Загружаем статус смены (showLoader = true)
-            const initialStatus = await fetchShiftStatus(); 
+            // Продолжаем блокировать экран до получения статуса
+            const initialStatus = await fetchShiftStatus(true); 
             if (initialStatus) {
                 setSlotState(initialStatus === 'Open', false);
             } else {
@@ -868,4 +872,4 @@
     </script>
     
 </body>
-</html>
+  </html>
