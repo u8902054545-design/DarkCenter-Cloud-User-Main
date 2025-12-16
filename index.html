@@ -78,6 +78,68 @@
         .btn-content-enter {
             animation: fadeIn 0.3s ease-out;
         }
+
+        /* ------------------ Стили Спиннера и Оверлея ------------------ */
+        .spinner {
+            width: 60px; 
+            height: 60px;
+            animation: rotate 2s linear infinite; 
+            transform-origin: center center;
+        }
+
+        .path {
+            stroke: #3b82f6; /* Фирменный синий цвет */
+            stroke-linecap: round;
+            stroke-width: 4; 
+            stroke-dasharray: 1, 150; 
+            animation: dash 1.5s ease-in-out infinite; 
+        }
+
+        @keyframes rotate {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes dash {
+            0% {
+                stroke-dasharray: 1, 150;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 70, 150; 
+                stroke-dashoffset: -25px;
+            }
+            100% {
+                stroke-dasharray: 70, 150;
+                stroke-dashoffset: -125px;
+            }
+        }
+        
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(10, 10, 10, 0.8); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100; 
+            
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            opacity: 0; 
+            visibility: hidden;
+            pointer-events: none; 
+        }
+
+        #loadingOverlay.visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto; /* Блокируем клики под оверлеем */
+        }
+        /* ----------------------------------------------------------------- */
     </style>
 </head>
 <body class="min-h-screen text-white antialiased overflow-x-hidden selection:bg-blue-500/30 pb-10">
@@ -198,6 +260,14 @@
 
         </div>
     </main>
+    
+    <div id="loadingOverlay">
+        
+        <svg id="loader" class="spinner" viewBox="25 25 50 50">
+            <circle class="path" cx="50" cy="50" r="20" fill="none" stroke-miterlimit="10" />
+        </svg>
+
+    </div>
 
     <script>
         // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ***
@@ -209,12 +279,31 @@
         let notificationTimeout;
         let currentAction = null; 
 
+        // --- ГЛОБАЛЬНЫЕ ФУНКЦИИ ЗАГРУЗКИ ---
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.classList.add('visible');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.classList.remove('visible');
+        }
+        // ------------------------------------
+
         // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ С GOOGLE ТАБЛИЦЕЙ ---
 
         /**
          * Получает текущий статус смены при загрузке страницы.
          */
         async function fetchShiftStatus() {
+            // Показываем спиннер только при первой загрузке
+            const isInitialLoad = document.getElementById('status-text').textContent === "Загрузка...";
+            
+            if (isInitialLoad) {
+                showLoading();
+            }
+            
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'GET',
@@ -230,17 +319,22 @@
                 
                 if (data.status === 'success') {
                     const status = data.shiftStatus;
-                    // Устанавливаем состояние в зависимости от полученного статуса.
-                    // Второй аргумент 'false' означает, что это чтение статуса, а не активное действие пользователя.
+                    // Второй аргумент 'false' = не обновлять isSlotActive, т.к. это чтение статуса
                     setSlotState(status === 'Open', false);
                 } else {
                     console.error("Error fetching status:", data.message);
-                    // Ошибка загрузки не должна влиять на isSlotActive, пока не будет явного действия
                 }
 
             } catch (error) {
                 console.error('Fetch error:', error);
-                // Ошибка сети не должна влиять на isSlotActive, пока не будет явного действия
+                if (isInitialLoad) {
+                    showToast("error", "Ошибка сети", "Не удалось получить статус смены.");
+                    setSlotState(false, false); 
+                }
+            } finally {
+                if (isInitialLoad) {
+                    hideLoading(); // Скрываем после начальной загрузки
+                }
             }
         }
 
@@ -248,6 +342,7 @@
          * Отправляет новый статус смены в Google Таблицу.
          */
         async function updateShiftStatus(newStatus) {
+            showLoading(); // Показываем спиннер при активном действии пользователя
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
@@ -277,6 +372,8 @@
                 console.error('Update error:', error);
                 showToast("error", "Ошибка сети", "Не удалось отправить новый статус. Проверьте соединение.");
                 return false;
+            } finally {
+                hideLoading(); // Скрываем оверлей всегда
             }
         }
 
@@ -303,7 +400,7 @@
         /**
          * Обновляет состояние и внешний вид интерфейса.
          * @param {boolean} active - true для Open, false для Closed.
-         * @param {boolean} updateIsSlotActive - Должны ли мы обновить глобальную переменную isSlotActive (true для кликов, false для автоматической загрузки).
+         * @param {boolean} updateIsSlotActive - Должны ли мы обновить глобальную переменную isSlotActive.
          */
         function setSlotState(active, updateIsSlotActive = true) {
             if (updateIsSlotActive) {
@@ -363,6 +460,8 @@
         }
 
         // --- ЛОГИКА BOTTOM SHEET (ШТОРКА) ---
+        // (Остальной код функций openBottomSheet, closeBottomSheet, showToast остается без изменений, 
+        // так как они не используют асинхронные запросы напрямую)
 
         function openBottomSheet(actionType) {
             currentAction = actionType;
@@ -373,7 +472,6 @@
             const confirmBtn = document.getElementById('sheet-confirm-btn');
             const icon = document.getElementById('sheet-icon');
 
-            // Настройка контента в зависимости от действия
             if (actionType === 'endSlot') {
                 title.textContent = "Завершить смену?";
                 desc.textContent = "Убедитесь, что вы закончили текущие задачи. После завершения вы перестанете получать новые заказы.";
@@ -396,7 +494,6 @@
                 icon.className = "w-16 h-16 rounded-full bg-neutral-700 flex items-center justify-center mx-auto mb-4";
             }
 
-            // Показ шторки
             backdrop.classList.remove('pointer-events-none', 'opacity-0');
             backdrop.classList.add('opacity-100');
             
@@ -417,8 +514,6 @@
             currentAction = null;
         }
 
-        // --- ЛОГИКА TOAST (УВЕДОМЛЕНИЯ) ---
-
         function showToast(type, title, message) {
             const toastContainer = document.getElementById('toast-container');
             const toastBody = document.getElementById('toast-body');
@@ -426,10 +521,8 @@
             const toastMsg = document.getElementById('toast-message');
             const toastIcon = document.getElementById('toast-icon');
 
-            // Сброс предыдущего
             if (notificationTimeout) clearTimeout(notificationTimeout);
 
-            // Стили
             if (type === 'success') {
                 toastBody.className = "glass-panel bg-[#0d140f]/95 shadow-2xl rounded-2xl px-5 py-4 flex items-center gap-4 min-w-[310px] max-w-sm border-l-4 border-green-500 backdrop-blur-xl";
                 toastIcon.innerHTML = '<div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>';
@@ -444,11 +537,9 @@
             toastTitle.textContent = title;
             toastMsg.textContent = message;
 
-            // Анимация показа
             toastContainer.classList.remove('opacity-0', '-translate-y-32');
             toastContainer.classList.add('opacity-100', 'translate-y-0');
 
-            // Анимация скрытия
             notificationTimeout = setTimeout(() => {
                 toastContainer.classList.remove('opacity-100', 'translate-y-0');
                 toastContainer.classList.add('opacity-0', '-translate-y-32');
