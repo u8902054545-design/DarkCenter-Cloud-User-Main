@@ -433,13 +433,36 @@
 
 
         // --- ГЛОБАЛЬНЫЕ ФУНКЦИИ ЗАГРУЗКИ ---
+        
+        /**
+         * Показывает блокирующий оверлей загрузки.
+         */
         function showLoading() {
             if (loadingOverlay) loadingOverlay.classList.add('visible');
         }
 
+        /**
+         * Скрывает блокирующий оверлей загрузки.
+         */
         function hideLoading() {
             if (loadingOverlay) loadingOverlay.classList.remove('visible');
         }
+
+        /**
+         * *** НОВАЯ ФУНКЦИЯ: Показывает индикатор загрузки только если он не видим,
+         * но не блокирует экран. ***
+         */
+        function silentShowLoading() {
+            // Оставляем без изменений, так как оверлей нужен только для блокирующих операций
+        }
+        
+        /**
+         * *** НОВАЯ ФУНКЦИЯ: Скрывает индикатор загрузки. ***
+         */
+        function silentHideLoading() {
+            // Оставляем без изменений, так как оверлей нужен только для блокирующих операций
+        }
+        
         // ------------------------------------
         
         /**
@@ -457,9 +480,10 @@
         /**
          * Проверяет токен и почту в localStorage с данными на сервере.
          * Если не совпадает или статус Inactive, перенаправляет на страницу авторизации.
+         * @param {boolean} isSilent - Если true, не показывает оверлей и тост при успехе.
          */
-        async function checkUserAuthentication() {
-            showLoading(); 
+        async function checkUserAuthentication(isSilent = false) {
+            if (!isSilent) showLoading(); // Используем блокирующий лоадер при первой загрузке
             
             const email = localStorage.getItem('userEmail');
             const token = localStorage.getItem('authToken');
@@ -496,7 +520,10 @@
                 if (data.status === 'success' && data.auth_ok) {
                     // Аутентификация успешна, устанавливаем данные пользователя
                     setUserInfo(data.user.fullName, data.user.email);
-                    showToast("Авторизация", "Успешный вход.");
+                    if (!isSilent) {
+                        // Тост показываем только при НЕ-тихой проверке (например, при логине)
+                        showToast("Авторизация", "Успешный вход.");
+                    }
                     return true;
                 } else {
                     // Аутентификация не пройдена (токен/email не совпал или статус 'Inactive')
@@ -507,11 +534,11 @@
 
             } catch (error) {
                 console.error('Fetch Auth error:', error);
+                // При сетевой ошибке, сообщаем пользователю, но не редиректим
                 showToast("Ошибка сети", "Не удалось связаться с сервером для проверки аутентификации.");
-                // При сетевой ошибке, лучше не перенаправлять сразу, чтобы дать пользователю возможность переподключиться.
                 return true; // Временно позволяем продолжить, но данные не обновятся
             } finally {
-                hideLoading(); 
+                if (!isSilent) hideLoading(); // Скрываем блокирующий лоадер
             }
         }
         
@@ -538,7 +565,6 @@
 
         /**
          * Выполняет запрос к серверу для получения текущего статуса смены.
-         * ... (Остальной код fetchShiftStatus остается без изменений) ...
          */
         async function fetchShiftStatus(showLoader = true) {
             if (showLoader) showLoading();
@@ -576,7 +602,6 @@
         
         /**
          * Отправляет новый статус смены в Google Таблицу.
-         * ... (Остальной код updateShiftStatus остается без изменений) ...
          */
         async function updateShiftStatus(newStatus) {
             showLoading(); 
@@ -822,12 +847,11 @@
         // --- ИНИЦИАЛИЗАЦИЯ И АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ ---
         
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. ПЕРВАЯ И КРИТИЧЕСКАЯ ПРОВЕРКА: АУТЕНТИФИКАЦИЯ
-            const isAuthenticated = await checkUserAuthentication();
+            // 1. ПЕРВАЯ И КРИТИЧЕСКАЯ ПРОВЕРКА: АУТЕНТИФИКАЦИЯ (Используем блокирующую)
+            const isAuthenticated = await checkUserAuthentication(false);
             
             if (!isAuthenticated) {
-                // Если аутентификация не пройдена, дальнейшая загрузка статуса не требуется, 
-                // так как функция checkUserAuthentication уже инициировала редирект.
+                // Если аутентификация не пройдена, дальнейшая загрузка статуса не требуется.
                 return;
             }
 
@@ -841,10 +865,12 @@
             
             // 3. Настраиваем регулярное обновление статуса
             setInterval(async () => {
-                // Перед обновлением статуса, убедимся, что пользователь все еще авторизован
-                const isStillAuthenticated = await checkUserAuthentication();
+                // Перед обновлением статуса, убедимся, что пользователь все еще авторизован.
+                // ИСПОЛЬЗУЕМ isSilent=true, чтобы проверка проходила незаметно.
+                const isStillAuthenticated = await checkUserAuthentication(true);
                 
                 if (isStillAuthenticated) {
+                    // Обновляем статус смены без оверлея (showLoader=false), как и просили.
                     const status = await fetchShiftStatus(false); 
                     if (status) {
                          setSlotState(status === 'Open', true);
@@ -858,4 +884,4 @@
     </script>
     
 </body>
-</html>
+  </html>
