@@ -387,10 +387,9 @@
 
     <script>
         // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT ***
-        // Обновлен APPS_SCRIPT_URL
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOeuWyvFF5HMjzZEzO8fJ97Vuh-nsfvfm8LVnlKaTtOqo_ZQVa2J2Wb3-mcSqvjV-KcA/exec';
+        // ОБНОВЛЕНО: Новый URL-адрес, предоставленный пользователем.
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzp7G3ES81qgUzs10lEYgXV4vD5CLk90pW7Hs29tCQmI-r2OKY9gxUq6XNcQov4moGHIw/exec';
         const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
-        // Обновлен LOGOUT_URL на ваш URL авторизации
         const LOGOUT_URL = 'https://u8902054545-design.github.io/Auth-ITC-Platform/'; 
         const BOTTOM_SHEET_ANIMATION_DURATION = 300; 
         const INTERVAL_MS = 3000; // Интервал в миллисекундах (3 секунды)
@@ -565,12 +564,24 @@
 
         /**
          * Выполняет запрос к серверу для получения текущего статуса смены.
+         * НОВОЕ: Передает Email пользователя в параметрах запроса.
          */
         async function fetchShiftStatus(showLoader = true) {
             if (showLoader) showLoading();
             
+            // НОВОЕ: Получаем Email пользователя из localStorage
+            const userEmail = localStorage.getItem('userEmail');
+            if (!userEmail) {
+                console.error("Email не найден. Невозможно получить статус.");
+                redirectToAuth();
+                return null;
+            }
+            
+            // НОВОЕ: Добавляем Email в URL как параметр
+            const urlWithParams = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(userEmail)}`;
+
             try {
-                const response = await fetch(APPS_SCRIPT_URL, {
+                const response = await fetch(urlWithParams, {
                     method: 'GET',
                     mode: 'cors',
                     cache: 'no-cache'
@@ -586,6 +597,9 @@
                     return data.shiftStatus;
                 } else {
                     console.error("Error fetching status:", data.message);
+                    if (data.message.includes("Missing email parameter")) {
+                         showToast("Ошибка", "Сервер не получил ваш Email для запроса статуса.");
+                    }
                     return null;
                 }
 
@@ -602,9 +616,19 @@
         
         /**
          * Отправляет новый статус смены в Google Таблицу.
+         * НОВОЕ: Передает Email пользователя в теле запроса.
          */
         async function updateShiftStatus(newStatus) {
             showLoading(); 
+            
+            // НОВОЕ: Получаем Email пользователя из localStorage
+            const userEmail = localStorage.getItem('userEmail');
+            if (!userEmail) {
+                console.error("Email не найден. Невозможно обновить статус.");
+                redirectToAuth();
+                return false;
+            }
+
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
@@ -613,7 +637,12 @@
                     headers: {
                         'Content-Type': 'text/plain;charset=utf-8' 
                     },
-                    body: JSON.stringify({ newStatus: newStatus })
+                    // НОВОЕ: Передаем Email в теле запроса
+                    body: JSON.stringify({ 
+                        newStatus: newStatus, 
+                        userEmail: userEmail,
+                        userFullName: userFullNameEl.textContent // Для записи в историю
+                    })
                 });
 
                 if (!response.ok) {
@@ -626,7 +655,7 @@
                     return true;
                 } else {
                     console.error("Error updating status:", data.message);
-                    showToast("Ошибка обновления", "Сервер вернул ошибку при обновлении статуса.");
+                    showToast("Ошибка обновления", `Сервер вернул ошибку: ${data.message}`);
                     return false;
                 }
 
@@ -696,6 +725,7 @@
         
         async function goToTasks() {
             showLoading();
+            // Получаем статус, используя новую логику с Email
             const actualStatus = await fetchShiftStatus(false);
             hideLoading();
             
@@ -847,15 +877,15 @@
         // --- ИНИЦИАЛИЗАЦИЯ И АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ ---
         
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. ПЕРВАЯ И КРИТИЧЕСКАЯ ПРОВЕРКА: АУТЕНТИФИКАЦИЯ (Используем блокирующую)
+            // 1. ПЕРВАЯ И КРИТИЧЕСКАЯ ПРОВЕРКА: АУТЕНТИФИКАЦИЯ
             const isAuthenticated = await checkUserAuthentication(false);
             
             if (!isAuthenticated) {
-                // Если аутентификация не пройдена, дальнейшая загрузка статуса не требуется.
                 return;
             }
 
             // 2. Загружаем статус смены только после успешной аутентификации
+            // Теперь fetchShiftStatus использует Email из localStorage
             const initialStatus = await fetchShiftStatus(true); 
             if (initialStatus) {
                 setSlotState(initialStatus === 'Open', false);
@@ -866,11 +896,10 @@
             // 3. Настраиваем регулярное обновление статуса
             setInterval(async () => {
                 // Перед обновлением статуса, убедимся, что пользователь все еще авторизован.
-                // ИСПОЛЬЗУЕМ isSilent=true, чтобы проверка проходила незаметно.
                 const isStillAuthenticated = await checkUserAuthentication(true);
                 
                 if (isStillAuthenticated) {
-                    // Обновляем статус смены без оверлея (showLoader=false), как и просили.
+                    // Обновляем статус смены без оверлея
                     const status = await fetchShiftStatus(false); 
                     if (status) {
                          setSlotState(status === 'Open', true);
@@ -884,4 +913,4 @@
     </script>
     
 </body>
-  </html>
+                            </html>
