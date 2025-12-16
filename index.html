@@ -16,8 +16,8 @@
             },
             colors: {
               'custom-blue': '#0000FF', 
-              dark: '#0a0a0a', // Добавлено из Файла 1 для стилей
-              card: '#171717', // Добавлено из Файла 1 для стилей
+              dark: '#0a0a0a', 
+              card: '#171717', 
             }
           }
         }
@@ -28,17 +28,17 @@
         /* Стили из Файла 1 */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0F0F0F; /* Основной темный фон */
+            background-color: #0F0F0F; 
             padding: 0;
             margin: 0;
             user-select: none; 
             -webkit-user-select: none; 
             -moz-user-select: none; 
             -ms-user-select: none; 
-            overscroll-behavior-y: none; /* Из Файла 1 */
+            overscroll-behavior-y: none; 
         }
         
-        /* Текстура шума (из Файла 1) */
+        /* Текстура шума */
         .bg-noise {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -46,7 +46,7 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        /* Glass Panel (из Файла 1) - Адаптировано */
+        /* Glass Panel */
         .glass-panel {
             background: rgba(23, 23, 23, 0.7);
             backdrop-filter: blur(16px);
@@ -54,27 +54,27 @@
             border: 1px solid rgba(255, 255, 255, 0.06);
         }
 
-        /* Active Scale (из Файла 1) - Для анимации нажатия */
+        /* Active Scale */
         .active-scale:active {
             transform: scale(0.96);
         }
 
-        /* Скрытие скроллбара (из Файла 1) */
+        /* Скрытие скроллбара */
         ::-webkit-scrollbar { width: 0; }
 
-        /* Адаптивный контейнер для ограничения ширины и центрирования (из Файла 2) */
+        /* Адаптивный контейнер */
         .content-container {
             max-width: 960px; 
             margin: 0 auto;
         }
         
-        /* Дополнительный блеск для кнопок при наведении (из Файла 2) */
+        /* Дополнительный блеск для кнопок при наведении */
         .btn-hover-effect:hover svg {
             transform: scale(1.05);
             transition: transform 0.2s ease;
         }
 
-        /* Анимация появления для кнопки (из Файла 2) */
+        /* Анимация появления для кнопки */
         .fade-in {
             animation: fadeIn 0.3s ease-in-out;
         }
@@ -83,7 +83,7 @@
             to { opacity: 1; transform: scale(1); }
         }
         
-        /* --- СТИЛИ ДЛЯ BOTTOM SHEET (из Файла 2) --- */
+        /* --- СТИЛИ ДЛЯ BOTTOM SHEET --- */
         .bottom-sheet-overlay {
             position: fixed;
             inset: 0;
@@ -117,7 +117,7 @@
             transform: translateY(0);
         }
 
-        /* --- СТИЛИ ДЛЯ TOAST NOTIFICATION (из Файла 2) --- */
+        /* --- СТИЛИ ДЛЯ TOAST NOTIFICATION --- */
         @keyframes slideIn {
             from { transform: translateY(-100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -130,7 +130,7 @@
         .toast-leave { animation: fadeOut 0.3s ease-out forwards; }
 
 
-        /* ------------------ Стили Спиннера и Оверлея (Из Файла 1) ------------------ */
+        /* ------------------ Стили Спиннера и Оверлея ------------------ */
         .spinner {
             width: 60px; 
             height: 60px;
@@ -139,7 +139,6 @@
         }
 
         .path {
-            /* Цвет из Файла 1: #3b82f6 (custom-blue в Файле 1). В Файле 2 custom-blue: #0000FF. Используем цвет из Файла 2 */
             stroke: #0000FF; 
             stroke-linecap: round;
             stroke-width: 4; 
@@ -174,7 +173,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: rgba(15, 15, 15, 0.8); /* Фон из Файла 2: #0F0F0F */
+            background-color: rgba(15, 15, 15, 0.8); 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -189,7 +188,7 @@
         #loadingOverlay.visible {
             opacity: 1;
             visibility: visible;
-            pointer-events: auto; /* Блокируем клики под оверлеем */
+            pointer-events: auto; 
         }
         /* ----------------------------------------------------------------- */
     </style>
@@ -208,11 +207,11 @@
                 Нет подтверждённых слотов
             </p>
             
-            <h1 class="text-base font-normal text-gray-400 mb-0.5 text-left">
+            <h1 class="text-base font-normal text-gray-400 mb-0.5 text-left" id="userName">
                 Иванов Иван
             </h1>
             
-            <p class="text-base font-normal text-gray-400 text-left">
+            <p class="text-base font-normal text-gray-400 text-left" id="userEmail">
                 +7 999 888-77-66
             </p>
 
@@ -387,23 +386,33 @@
     </div>
 
     <script>
-        // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT (ИЗ ФАЙЛА 1) ***
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBQYQUq_485jOlnRDV2gonG_t3VmL4zKvYVbmSMgKJvV7zZpEjYJ6F0lo0kYqh4HEnOA/exec';
+        // *** КОНФИГУРАЦИЯ GOOGLE APPS SCRIPT (ОБНОВЛЕННЫЙ URL) ***
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsXFWQpton0ICNydgH0K2xW9RzsqIqb8aDDit6A_oZU-D6ulFAQkRQ3lciIIsHjJYXXg/exec';
         const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
-        const LOGOUT_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Auth/';
+        const LOGOUT_URL = 'https://u8902054545-design.github.io/Auth-ITC-Platform/'; // НОВАЯ СТРАНИЦА АВТОРИЗАЦИИ
         const BOTTOM_SHEET_ANIMATION_DURATION = 300; 
         const INTERVAL_MS = 3000; // Интервал в миллисекундах (3 секунды)
+
+        // --- КЛЮЧИ ЛОКАЛЬНОГО ХРАНИЛИЩА ---
+        const TOKEN_KEY = 'userTokenKey';
+        const EMAIL_KEY = 'userEmailKey';
+        // -----------------------------------
 
         // --- СОСТОЯНИЕ ---
         let isSlotActive = false;
         let notificationTimeout;
 
         // --- ПЕРЕМЕННЫЕ ЭЛЕМЕНТОВ DOM ---
-        const statusIndicator = document.getElementById('status-indicator'); // Бывший status-text в Файле 2
-        const infoMessage = document.getElementById('info-message'); // Информационное окно с предупреждением
+        const statusIndicator = document.getElementById('status-indicator'); 
+        const infoMessage = document.getElementById('info-message'); 
         const mainBtnText = document.getElementById('main-btn-text');
         const closeSlotBtn = document.getElementById('close-slot-btn');
-        const mainBtnIconPath = document.getElementById('main-btn-icon-path'); // Наш path внутри SVG
+        const mainBtnIconPath = document.getElementById('main-btn-icon-path'); 
+        
+        // !!! НОВЫЕ ЭЛЕМЕНТЫ ДЛЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ !!!
+        const userNameElement = document.getElementById('userName'); 
+        const userEmailElement = document.getElementById('userEmail');
+        // -----------------------------------------------
 
         // Элементы Bottom Sheet
         const bottomSheet = document.getElementById('bottom-sheet');
@@ -420,14 +429,14 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
 
         // Определяем пути для иконок
-        const lightningPathD = "M13 10V3L4 14h7v7l9-11h-7z"; // Путь молнии (исходный)
-        const arrowPathD = "M9 5l7 7-7 7"; // Путь стрелки вправо (для "Перейти к задачам")
+        const lightningPathD = "M13 10V3L4 14h7v7l9-11h-7z"; 
+        const arrowPathD = "M9 5l7 7-7 7"; 
 
         // Присваиваем универсальный обработчик для закрытия при клике на оверлей
         bottomSheetOverlay.onclick = hideBottomSheet;
 
 
-        // --- ГЛОБАЛЬНЫЕ ФУНКЦИИ ЗАГРУЗКИ (ИЗ ФАЙЛА 1) ---
+        // --- ГЛОБАЛЬНЫЕ ФУНКЦИИ ЗАГРУЗКИ ---
         function showLoading() {
             if (loadingOverlay) loadingOverlay.classList.add('visible');
         }
@@ -436,16 +445,118 @@
             if (loadingOverlay) loadingOverlay.classList.remove('visible');
         }
         // ------------------------------------
+        
+        // --- ЛОГИКА АВТОРИЗАЦИИ И ПРОВЕРКИ (НОВЫЙ БЛОК) ---
 
-        // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ С GOOGLE ТАБЛИЦЕЙ (ИЗ ФАЙЛА 1) ---
+        /**
+         * Читает токен и email из localStorage.
+         * @returns {{token: string|null, email: string|null}} 
+         */
+        function getAuthData() {
+            const token = localStorage.getItem(TOKEN_KEY);
+            const email = localStorage.getItem(EMAIL_KEY);
+            return { token, email };
+        }
+        
+        /**
+         * Перенаправляет на страницу авторизации и очищает данные.
+         */
+        function redirectToAuth(reason = "Не авторизован") {
+            console.warn(`Перенаправление на страницу авторизации. Причина: ${reason}`);
+            showLoading();
+            
+            // Очистка данных, чтобы избежать циклической переадресации
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(EMAIL_KEY);
+
+            // Задержка для отображения лоадера и анимации
+            setTimeout(() => {
+                window.location.href = LOGOUT_URL;
+            }, 500); 
+        }
+
+        /**
+         * Проверяет токен и статус пользователя на сервере.
+         * Вызывается при загрузке страницы и в интервале.
+         * @returns {Promise<boolean>} true, если аутентификация прошла успешно.
+         */
+        async function checkUserAuthentication() {
+            // Не показываем лоадер, если это фоновая проверка
+            const isInitialCheck = !userNameElement.textContent.includes('@'); 
+            if (isInitialCheck) showLoading();
+
+            const { token, email } = getAuthData();
+
+            // 1. Проверка наличия данных в Local Storage
+            if (!token || !email) {
+                redirectToAuth("Данные в Local Storage отсутствуют.");
+                return false;
+            }
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' 
+                    },
+                    body: JSON.stringify({ 
+                        action: 'checkUserAuth', 
+                        userEmail: email,
+                        userToken: token
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.action === 'checkUserAuth') {
+                    
+                    if (data.isAuthenticated) {
+                        // 2. Аутентификация успешна. Отображаем данные пользователя.
+                        const user = data.user;
+                        if (userNameElement) userNameElement.textContent = user.fullName || 'Пользователь';
+                        // Отображаем Email вместо номера телефона, как требуется
+                        if (userEmailElement) userEmailElement.textContent = user.email || 'Нет данных';
+                        
+                        if (isInitialCheck) hideLoading();
+                        return true; 
+                    } else {
+                        // 3. Аутентификация провалена (токен не совпал или статус 'Inactive')
+                        redirectToAuth("Ошибка аутентификации или неактивный статус.");
+                        return false;
+                    }
+
+                } else {
+                    // Сервер вернул ошибку или неверный формат
+                    throw new Error("Некорректный ответ от сервера.");
+                }
+
+            } catch (error) {
+                console.error('Check Auth Error:', error);
+                if (isInitialCheck) {
+                     showToast("Ошибка сервера", "Не удалось проверить статус авторизации.");
+                }
+                redirectToAuth("Ошибка связи с сервером.");
+                return false;
+            }
+        }
+        
+        // --- ЛОГИКА ВЗАИМОДЕЙСТВИЯ С GOOGLE ТАБЛИЦЕЙ (СТАТУС СМЕНЫ) ---
 
         /**
          * Выполняет запрос к серверу для получения текущего статуса смены.
+         * (Оставлена как GET для совместимости со старыми запросами)
          * @param {boolean} showLoader - Показывать ли спиннер при запросе.
          * @returns {Promise<string|null>} 'Open', 'Closed', или null в случае ошибки.
          */
         async function fetchShiftStatus(showLoader = true) {
-            if (showLoader) showLoading();
+            // Вызов showLoading/hideLoading удален, так как это делает checkUserAuthentication
+            // или главная функция DOMContentLoaded.
             
             try {
                 const response = await fetch(APPS_SCRIPT_URL, {
@@ -470,13 +581,10 @@
             } catch (error) {
                 console.error('Fetch error:', error);
                 if (showLoader) {
-                    // Адаптация showToast под упрощенную систему Файла 2
                     showToast("Ошибка сети", "Не удалось получить статус смены.");
                 }
                 return null;
-            } finally {
-                if (showLoader) hideLoading(); 
-            }
+            } 
         }
         
         /**
@@ -492,7 +600,10 @@
                     headers: {
                         'Content-Type': 'text/plain;charset=utf-8' 
                     },
-                    body: JSON.stringify({ newStatus: newStatus })
+                    body: JSON.stringify({ 
+                        action: 'updateShiftStatus', // Добавляем action
+                        newStatus: newStatus 
+                    })
                 });
 
                 if (!response.ok) {
@@ -540,7 +651,6 @@
 
         /**
          * Обновляет состояние и внешний вид интерфейса.
-         * Адаптировано под HTML-структуру Файла 2.
          * @param {boolean} active - true для Open, false для Closed.
          * @param {boolean} updateIsSlotActive - Должны ли мы обновить глобальную переменную isSlotActive.
          */
@@ -550,11 +660,11 @@
             }
             
             if (active) {
-                // Слот активен: Обновляем статус, кнопку и показываем кнопку закрытия
+                // Слот активен
                 statusIndicator.textContent = "Слот активен";
                 statusIndicator.classList.add('text-green-400');
                 statusIndicator.classList.remove('text-white');
-                infoMessage.classList.add('hidden'); // Скрываем информационное окно
+                infoMessage.classList.add('hidden'); 
                 
                 mainBtnText.textContent = 'Перейти к задачам';
                 mainBtnIconPath.setAttribute('d', arrowPathD); 
@@ -562,15 +672,14 @@
                 closeSlotBtn.classList.remove('hidden');
                 closeSlotBtn.classList.add('flex');
 
-                // Переопределяем onclick для главной кнопки на переход к задачам
                 document.getElementById('main-action-btn').onclick = goToTasks;
 
             } else {
-                // Слот закрыт: Обновляем статус, кнопку и скрываем кнопку закрытия
+                // Слот закрыт
                 statusIndicator.textContent = "Нет подтверждённых слотов";
                 statusIndicator.classList.add('text-white');
                 statusIndicator.classList.remove('text-green-400');
-                infoMessage.classList.remove('hidden'); // Показываем информационное окно
+                infoMessage.classList.remove('hidden'); 
 
                 mainBtnText.textContent = 'Начать слот';
                 mainBtnIconPath.setAttribute('d', lightningPathD); 
@@ -578,7 +687,6 @@
                 closeSlotBtn.classList.add('hidden');
                 closeSlotBtn.classList.remove('flex');
                 
-                // Переопределяем onclick для главной кнопки на запуск слота
                 document.getElementById('main-action-btn').onclick = toggleSlot;
             }
         }
@@ -615,7 +723,7 @@
             }
         }
         
-        // --- ЛОГИКА BOTTOM SHEET (Универсальная из Файла 2) ---
+        // --- ЛОГИКА BOTTOM SHEET ---
 
         function showBottomSheet() {
             bottomSheetOverlay.classList.add('active');
@@ -628,7 +736,7 @@
         }
 
 
-        // --- ЛОГИКА ПОДТВЕРЖДЕНИЯ ЗАКРЫТИЯ СЛОТА (Адаптировано) ---
+        // --- ЛОГИКА ПОДТВЕРЖДЕНИЯ ЗАКРЫТИЯ СЛОТА ---
 
         function showStopSlotConfirmation() {
             if (!isSlotActive) return; 
@@ -638,7 +746,7 @@
             
             // Кнопка подтверждения
             bsConfirmBtn.innerText = "Да, завершить";
-            bsConfirmBtn.onclick = endSlot; // Вызываем функцию endSlot, которая обращается к серверу
+            bsConfirmBtn.onclick = endSlot; 
             bsConfirmBtn.className = "bg-red-600 text-white text-base font-semibold rounded-xl shadow-lg hover:bg-red-700 transition duration-150 active:scale-[0.99] py-3 px-4";
 
             // Кнопка отмены
@@ -649,7 +757,7 @@
         }
 
 
-        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА (Адаптировано) ---
+        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА ---
         
         function showLogoutConfirmation() {
             const subtitleOpen = "Изменённые настройки не сбросятся, активные задачи и слот сохранятся";
@@ -673,26 +781,29 @@
         function confirmLogout() {
             hideBottomSheet();
             showToast("Выход...", "Перенаправление на страницу входа");
+            
+            // Очищаем Local Storage перед выходом
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(EMAIL_KEY);
+            
             setTimeout(() => {
                 window.location.href = LOGOUT_URL; 
             }, BOTTOM_SHEET_ANIMATION_DURATION); 
         }
 
-        // --- ЛОГИКА TOAST (Адаптировано под Файл 2) ---
+        // --- ЛОГИКА TOAST ---
         
         /**
-         * Показывает всплывающее уведомление, имитируя стили Файла 1 (но с упрощенной структурой Файла 2).
-         * @param {string} title - Заголовок (в Файле 2 это просто текст).
+         * Показывает всплывающее уведомление.
+         * @param {string} title - Заголовок.
          * @param {string} message - Сообщение.
          */
         function showToast(title, message) {
             
-            // Создаем элемент уведомления
             const toast = document.createElement('div');
             
-            // Стиль для успеха (зеленый)
             const isSuccess = title.includes("активна") || title.includes("открыта");
-            const isError = title.includes("Ошибка") || title.includes("закрыта");
+            const isError = title.includes("Ошибка") || title.includes("закрыта") || title.includes("Выход");
             
             let bgClass = isSuccess ? 'bg-green-600/10 border-green-500/30' : 
                           isError ? 'bg-red-600/10 border-red-500/30' : 
@@ -731,14 +842,11 @@
                 </div>
             `;
 
-            // Убираем предыдущий таймер, если есть
             if (notificationTimeout) clearTimeout(notificationTimeout);
             
-            // Удаляем все предыдущие тосты, чтобы всегда был только один (как в Файле 1)
             toastContainer.innerHTML = '';
             toastContainer.appendChild(toast);
 
-            // Обработчик удаления
             const removeToast = () => {
                 toast.classList.remove('toast-enter');
                 toast.classList.add('toast-leave');
@@ -750,27 +858,42 @@
                 });
             };
 
-            // Удалить при клике на само уведомление
             toast.addEventListener('click', removeToast);
 
-            // Автоматическое удаление через 4 секунды (как в Файле 1)
             notificationTimeout = setTimeout(removeToast, 4000);
         }
 
-        // --- ИНИЦИАЛИЗАЦИЯ И АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ (ИЗ ФАЙЛА 1) ---
+        // --- ИНИЦИАЛИЗАЦИЯ И АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ (ОБНОВЛЕННЫЙ БЛОК) ---
         
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Загружаем статус смены сразу при загрузке страницы
-            const initialStatus = await fetchShiftStatus(true); // Показываем лоадер при старте
+            
+            // 1. --- ГЛАВНАЯ ПРОВЕРКА АВТОРИЗАЦИИ ---
+            // Проверяем токен и статус. Если не проходит, перенаправляет.
+            const isAuthenticated = await checkUserAuthentication();
+            
+            if (!isAuthenticated) {
+                return; // Остановка выполнения, если аутентификация не пройдена
+            }
+            // --------------------------------------
+
+            // 2. Загружаем статус смены сразу после успешной авторизации
+            const initialStatus = await fetchShiftStatus(true); 
             if (initialStatus) {
                 setSlotState(initialStatus === 'Open', false);
             } else {
-                setSlotState(false, false); // Устанавливаем в закрыто в случае ошибки
+                setSlotState(false, false); 
             }
             
-            // 2. Настраиваем регулярное обновление статуса
+            // 3. Настраиваем регулярное обновление
             setInterval(async () => {
-                const status = await fetchShiftStatus(false); // Не показываем лоадер при фоновом обновлении
+                // Быстро проверяем, не был ли пользователь деактивирован, 
+                // если проверка не прошла, функция сама перенаправит.
+                const stillAuthenticated = await checkUserAuthentication(); 
+                if (!stillAuthenticated) {
+                    return; 
+                }
+                
+                const status = await fetchShiftStatus(false); 
                 if (status) {
                      setSlotState(status === 'Open', true);
                 }
@@ -782,4 +905,4 @@
     </script>
     
 </body>
-  </html>
+</html>
