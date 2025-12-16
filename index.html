@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Личный Кабинет</title>
+    <title>DarkCenter Cloud User Main</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -209,7 +209,7 @@
 
                 <div id="action-active" class="absolute inset-0 w-full h-full flex gap-3 transition-all duration-300 transform opacity-0 scale-95 pointer-events-none">
                     
-                    <button onclick="window.location.href='#tasks'" class="flex-1 h-full bg-neutral-800 hover:bg-neutral-700 border border-white/10 text-white font-semibold rounded-2xl active-scale flex justify-center items-center gap-2 transition-all">
+                    <button onclick="goToTasks()" class="flex-1 h-full bg-neutral-800 hover:bg-neutral-700 border border-white/10 text-white font-semibold rounded-2xl active-scale flex justify-center items-center gap-2 transition-all">
                         <span>Перейти к задачам</span>
                         <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </button>
@@ -378,7 +378,7 @@
         }
 
 
-        // --- ЛОГИКА СМЕНЫ ---
+        // --- ЛОГИКА СМЕНЫ И НАВИГАЦИИ ---
 
         async function startSlot() {
             const success = await updateShiftStatus('Open');
@@ -394,6 +394,19 @@
                 setSlotState(false);
                 showToast("neutral", "Смена завершена", "Спасибо за работу! Данные сохранены.");
                 closeBottomSheet();
+            }
+        }
+
+        /**
+         * Проверяет, открыта ли смена, и перенаправляет пользователя к задачам.
+         */
+        function goToTasks() {
+            if (isSlotActive) {
+                // Если смена открыта, переходим по ссылке
+                window.location.href = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
+            } else {
+                // Если смена закрыта, предупреждаем пользователя
+                showToast("error", "Смена неактивна", "Сначала необходимо нажать 'Начать смену'.");
             }
         }
 
@@ -460,8 +473,6 @@
         }
 
         // --- ЛОГИКА BOTTOM SHEET (ШТОРКА) ---
-        // (Остальной код функций openBottomSheet, closeBottomSheet, showToast остается без изменений, 
-        // так как они не используют асинхронные запросы напрямую)
 
         function openBottomSheet(actionType) {
             currentAction = actionType;
