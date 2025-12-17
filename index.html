@@ -72,8 +72,8 @@
             animation: fadeIn 0.3s ease-in-out;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         /* --- BOTTOM SHEET --- */
@@ -127,17 +127,30 @@
     <header class="w-full bg-neutral-800/70 backdrop-blur-md px-4 py-6 sm:px-6 sm:py-8 rounded-b-3xl shadow-xl border-b border-neutral-700/50">
         <div class="content-container">
             
-            <p id="status-indicator" class="text-xl font-bold text-gray-400 mb-2 text-left">
-                Загрузка статуса...
-            </p>
-            
-            <h1 id="user-full-name" class="text-base font-normal text-gray-400 mb-0.5 text-left">
-                Загрузка имени...
-            </h1>
-            
-            <p id="user-contact" class="text-base font-normal text-gray-400 text-left">
-                Загрузка контакта...
-            </p>
+            <!-- СКЕЛЕТОН (Skeleton Block) - Виден по умолчанию -->
+            <div id="profile-skeleton" class="animate-pulse space-y-3 mb-5">
+                <!-- Статус Skeleton -->
+                <div class="h-6 bg-neutral-700 rounded-lg w-1/2"></div>
+                <!-- Имя Skeleton -->
+                <div class="h-5 bg-neutral-700 rounded-lg w-3/4"></div>
+                <!-- Контакт Skeleton -->
+                <div class="h-5 bg-neutral-700 rounded-lg w-2/5"></div>
+            </div>
+
+            <!-- КОНТЕНТ ПРОФИЛЯ - Скрыт по умолчанию, показывается при загрузке данных -->
+            <div id="profile-content" class="hidden">
+                <p id="status-indicator" class="text-xl font-bold text-gray-400 mb-2 text-left">
+                    <!-- Загрузка статуса... -->
+                </p>
+                
+                <h1 id="user-full-name" class="text-base font-normal text-gray-400 mb-0.5 text-left">
+                    <!-- Загрузка имени... -->
+                </h1>
+                
+                <p id="user-contact" class="text-base font-normal text-gray-400 text-left">
+                    <!-- Загрузка контакта... -->
+                </p>
+            </div>
 
             <div id="info-message" class="mt-4 p-3 flex items-start gap-3 bg-yellow-900/20 border border-yellow-600/30 rounded-2xl hidden">
                 <div class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center mt-0.5">
@@ -171,7 +184,7 @@
     <main class="py-6">
         <div class="content-container px-4 sm:px-6 space-y-3"> 
             
-            <!-- Кнопка "Расписание" с новой функцией goToSchedule() -->
+            <!-- Кнопка "Расписание" с функцией goToSchedule() -->
             <button onclick="goToSchedule()" class="w-full group btn-hover-effect flex items-center justify-between p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-neutral-800 transition duration-200 active:scale-[0.99]">
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
@@ -208,7 +221,8 @@
                 <svg class="w-5 h-5 text-neutral-500 group-hover:text-custom-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
             </button>
 
-            <button class="w-full group btn-hover-effect flex items-center justify-between p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-neutral-800 transition duration-200 active:scale-[0.99]">
+            <!-- Кнопка "Настройки" с функцией goToSettings() -->
+            <button onclick="goToSettings()" class="w-full group btn-hover-effect flex items-center justify-between p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-neutral-800 transition duration-200 active:scale-[0.99]">
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
                         <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
@@ -292,13 +306,14 @@
     </div>
 
     <script>
-        // *** НОВЫЙ URL ОТ ПОЛЬЗОВАТЕЛЯ ***
+        // --- КОНСТАНТЫ И URL ---
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyAtGgnNaGTtzmlMS6I1vIGxv1lHLLXQuYFImdxdTSgpDOO591KUf5vaNQ0nV5J32SbWw/exec';
         
         const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
         const LOGOUT_URL = 'https://u8902054545-design.github.io/Auth-ITC-Platform/'; 
-        // URL для кнопки "Расписание"
         const SCHEDULE_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Slot-Schedule/'; 
+        // НОВЫЙ URL ДЛЯ НАСТРОЕК
+        const SETTINGS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Settings/'; 
         
         const INTERVAL_MS = 3000; 
 
@@ -306,18 +321,26 @@
         let isSlotActive = false;
         let canStartSlot = false; // Разрешено ли начинать смену (проверка времени)
         let notificationTimeout;
+        let isProfileDataLoaded = false; // Флаг для управления скелетоном
 
         // --- ЭЛЕМЕНТЫ ---
+        // Элементы для отображения данных
         const statusIndicator = document.getElementById('status-indicator'); 
+        const userFullNameEl = document.getElementById('user-full-name');
+        const userContactEl = document.getElementById('user-contact');
+
+        // Элементы для управления скелетоном
+        const profileSkeleton = document.getElementById('profile-skeleton');
+        const profileContent = document.getElementById('profile-content');
+        
+        // Остальные элементы
         const infoMessage = document.getElementById('info-message'); 
         const mainBtn = document.getElementById('main-action-btn');
         const mainBtnText = document.getElementById('main-btn-text');
         const mainBtnIconPath = document.getElementById('main-btn-icon-path'); 
         const closeSlotBtn = document.getElementById('close-slot-btn');
-        const userFullNameEl = document.getElementById('user-full-name');
-        const userContactEl = document.getElementById('user-contact');
         
-        // Bottom Sheet
+        // Bottom Sheet & Toast
         const bottomSheet = document.getElementById('bottom-sheet');
         const bottomSheetOverlay = document.getElementById('bottom-sheet-overlay');
         const bsTitle = document.getElementById('bsTitle');
@@ -334,11 +357,33 @@
 
         function showLoading() { if (loadingOverlay) loadingOverlay.classList.add('visible'); }
         function hideLoading() { if (loadingOverlay) loadingOverlay.classList.remove('visible'); }
-        function setUserInfo(fullName, email) { userFullNameEl.textContent = fullName; userContactEl.textContent = email; }
 
-        // --- ФУНКЦИЯ ДЛЯ КНОПКИ "РАСПИСАНИЕ" ---
+        /**
+         * Скрывает скелетон и показывает загруженные данные профиля
+         */
+        function showProfileData() {
+            if (!isProfileDataLoaded) {
+                profileSkeleton.classList.add('hidden');
+                profileContent.classList.remove('hidden');
+                profileContent.classList.add('fade-in');
+                isProfileDataLoaded = true;
+            }
+        }
+        
+        function setUserInfo(fullName, email) { 
+            userFullNameEl.textContent = fullName; 
+            userContactEl.textContent = email; 
+            showProfileData(); // Показываем данные при успешной авторизации
+        }
+
+        // --- ФУНКЦИИ ДЛЯ КНОПОК ---
         function goToSchedule() {
             window.location.href = SCHEDULE_URL;
+        }
+        
+        // НОВАЯ ФУНКЦИЯ ДЛЯ КНОПКИ "НАСТРОЙКИ"
+        function goToSettings() {
+            window.location.href = SETTINGS_URL;
         }
 
         // --- АВТОРИЗАЦИЯ ---
@@ -368,6 +413,9 @@
             } catch (error) {
                 console.error('Auth error:', error);
                 showToast("Ошибка сети", "Нет связи с сервером.");
+                // Разрешаем дальнейшую работу, чтобы показать скелетон, если данные не пришли,
+                // но при этом не блокируем приложение.
+                showProfileData(); 
                 return true; 
             } finally {
                 if (!isSilent) hideLoading();
@@ -384,7 +432,7 @@
 
         // --- API ТАБЛИЦЫ ---
         
-        // ОБНОВЛЕНО: Возвращает полный объект данных (статус, info, canStart)
+        // Возвращает полный объект данных (статус, info, canStart)
         async function fetchShiftStatusData(showLoader = true) {
             if (showLoader) showLoading();
             const userEmail = localStorage.getItem('userEmail');
@@ -441,6 +489,8 @@
          */
         function updateUI(data) {
             if (!data) return;
+            
+            showProfileData(); // Если данные пришли, показываем контент (скрываем скелетон)
 
             const status = data.shiftStatus; // 'Open' or 'Closed'
             const infoText = data.info;      // Сообщение (напр. "Слот начнется в 10:00")
@@ -542,7 +592,7 @@
             }
         }
 
-        // --- CONFIRMATIONS ---
+        // --- CONFIRMATIONS / MODALS ---
         function showStopSlotConfirmation() {
             if (!isSlotActive) return; 
             bsTitle.innerText = "Завершить слот?";
@@ -615,4 +665,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
