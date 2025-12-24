@@ -10,18 +10,67 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         
+        :root {
+            --transition-duration: 600ms;
+            --transition-timing: cubic-bezier(0.2, 0, 0, 1);
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0F0F0F;
-            min-height: 100vh;
+            height: 100vh; /* Фиксируем высоту для слайдов */
             margin: 0;
-            padding-bottom: 100px; 
-            overflow-x: hidden;
+            overflow: hidden; /* Скрываем скролл бади для анимации */
             -webkit-user-select: none; 
             -ms-user-select: none; 
             user-select: none; 
             overscroll-behavior-y: none;
         }
+
+        /* --- Стили для переходов экранов --- */
+        .screen-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Важно: overflow-y: auto позволяет скроллить контент внутри слайда */
+            overflow-y: auto; 
+            overflow-x: hidden;
+            background-color: #0F0F0F;
+            
+            /* Настройки перехода */
+            transition: transform var(--transition-duration) var(--transition-timing), 
+                        opacity var(--transition-duration) var(--transition-timing);
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+            padding-bottom: 100px; /* Отступ под меню */
+        }
+        
+        /* Скрываем скроллбар внутри экранов, но оставляем скролл */
+        .screen::-webkit-scrollbar { display: none; }
+        .screen { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Состояния анимации */
+        .screen.active { transform: translateX(0) scale(1); opacity: 1; z-index: 10; }
+        
+        .slide-in-right { transform: translateX(0) scale(1); z-index: 10; }
+        .slide-out-left { transform: translateX(-25%) scale(0.92); opacity: 0.5; z-index: 0; pointer-events: none; }
+        
+        .slide-in-left { transform: translateX(0) scale(1); z-index: 10; }
+        .slide-out-right { transform: translateX(100%) scale(1); z-index: 0; pointer-events: none; }
+
+        .initial-right { transform: translateX(100%); opacity: 1; }
+        .initial-left { transform: translateX(-100%) scale(1); opacity: 1; }
+
+        /* --- Старые стили --- */
         
         .header-style {
             border-bottom-left-radius: 24px;
@@ -37,10 +86,12 @@
         .nav-item.active svg { color: #FFFFFF; }
         .nav-item svg { color: #C4C7C5; transition: color 0.2s; }
         
+        /* Меню теперь имеет z-index выше экранов */
         .nav-bar {
             background-color: #1F1F1F;
             border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
+            z-index: 50; 
         }
 
         .calendar-item { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid transparent; }
@@ -116,41 +167,42 @@
             background-color: #252525;
         }
 
-        /* Улучшенный Skeleton с плавным градиентом */
         .skeleton-shimmer {
-            position: relative;
-            overflow: hidden;
-            background-color: #1A1A1A;
+            position: relative; overflow: hidden; background-color: #1A1A1A;
         }
         .skeleton-shimmer::after {
-            content: "";
-            position: absolute;
-            top: 0; right: 0; bottom: 0; left: 0;
+            content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
             transform: translateX(-100%);
-            background-image: linear-gradient(
-                90deg,
-                rgba(255, 255, 255, 0) 0,
-                rgba(255, 255, 255, 0.03) 20%,
-                rgba(255, 255, 255, 0.06) 50%,
-                rgba(255, 255, 255, 0.03) 80%,
-                rgba(255, 255, 255, 0) 100%
-            );
+            background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.03) 20%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.03) 80%, rgba(255, 255, 255, 0) 100%);
             animation: shimmer 2s infinite;
         }
-        @keyframes shimmer {
-            100% { transform: translateX(100%); }
-        }
-        .skeleton-block {
-            background-color: #2A2A2A;
-            border-radius: 6px;
-        }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+        .skeleton-block { background-color: #2A2A2A; border-radius: 6px; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-        .fade-in {
-            animation: fadeIn 0.4s ease-out forwards;
+        /* Стили для iframe */
+        #schedule-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            flex-grow: 1;
+            background-color: #0F0F0F;
+            position: relative;
+            z-index: 2;
+        }
+        #iframe-loader {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
         }
     </style>
 </head>
@@ -164,48 +216,64 @@
 
     <div id="notification-area"></div>
 
-    <header class="w-full header-style sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex justify-between items-center h-8 mb-4">
-                <h1 class="text-lg font-bold text-white" id="screen-title">Главный экран</h1>
-                <button id="profile-button" class="flex items-center justify-center p-1 rounded-full border border-solid hover:bg-white/10 transition-colors" style="border-color: #0000FF;">
-                    <i data-lucide="circle-user" class="w-6 h-6" style="color: #0000FF;"></i>
-                </button>
-            </div>
+    <div class="screen-container">
 
-            <div id="calendar-strip" class="flex overflow-x-scroll space-x-3 pb-2 -mx-4 px-4 scrollbar-hide"></div>
+        <div id="screen-main" class="screen active">
+            <header class="w-full header-style sticky top-0 z-30">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div class="flex justify-between items-center h-8 mb-4">
+                        <h1 class="text-lg font-bold text-white" id="screen-title">Главный экран</h1>
+                        <button id="profile-button" class="flex items-center justify-center p-1 rounded-full border border-solid hover:bg-white/10 transition-colors" style="border-color: #0000FF;">
+                            <i data-lucide="circle-user" class="w-6 h-6" style="color: #0000FF;"></i>
+                        </button>
+                    </div>
 
-            <div id="shift-action-container" class="w-full mt-4 flex">
-                <div id="end-shift-button" class="close-shift-button mr-3" style="display: none;"></div>
-                <button id="main-action-button" class="w-full flex items-center justify-center text-center text-white font-bold transition-all duration-300 shadow-lg disabled:opacity-50" style="padding: 14px; border-radius: 6px; background-color: #0000FF; height: 50px;">
-                     <span class="btn-text">Загрузка...</span>
-                </button>
+                    <div id="calendar-strip" class="flex overflow-x-scroll space-x-3 pb-2 -mx-4 px-4 scrollbar-hide"></div>
+
+                    <div id="shift-action-container" class="w-full mt-4 flex">
+                        <div id="end-shift-button" class="close-shift-button mr-3" style="display: none;"></div>
+                        <button id="main-action-button" class="w-full flex items-center justify-center text-center text-white font-bold transition-all duration-300 shadow-lg disabled:opacity-50" style="padding: 14px; border-radius: 6px; background-color: #0000FF; height: 50px;">
+                             <span class="btn-text">Загрузка...</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex flex-col items-center justify-start min-h-[50vh] pt-8 pb-16 px-4 w-full" id="main-content">
+                </main>
+        </div>
+
+        <div id="screen-schedule" class="screen initial-right">
+            <div id="schedule-container">
+                <div id="iframe-loader">
+                    <svg class="spinner" viewBox="0 0 50 50">
+                        <circle class="path" cx="25" cy="25" r="20" fill="none"></circle>
+                    </svg>
+                </div>
+                <iframe id="schedule-iframe" data-src="https://u8902054545-design.github.io/DarkCenter-Cloud-Slot-Schedule/"></iframe>
             </div>
         </div>
-    </header>
 
-    <main class="flex flex-col items-center justify-start min-h-[50vh] pt-8 pb-16 px-4 w-full" id="main-content">
-        <!-- Контент -->
-    </main>
+    </div>
 
     <nav class="nav-bar fixed bottom-6 left-1/2 transform -translate-x-1/2 max-w-md w-[calc(100%-3rem)] rounded-full p-2 z-40">
         <div class="flex justify-between items-center h-14">
-            <button class="nav-item active flex flex-col items-center justify-center h-full w-1/6" data-url="#" data-name="Главный">
+            <button class="nav-item active flex flex-col items-center justify-center h-full w-1/6" id="nav-home">
                 <div class="icon-container w-12 h-8 flex items-center justify-center rounded-full transition-colors"><i data-lucide="home" class="w-5 h-5"></i></div>
             </button>
-            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6" data-url="https://u8902054545-design.github.io/DarkCenter-Cloud-Slot-Schedule/" data-name="Расписание">
+            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6" id="nav-schedule">
                 <div class="icon-container w-12 h-8 flex items-center justify-center rounded-full transition-colors"><i data-lucide="calendar-days" class="w-5 h-5"></i></div>
             </button>
-            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6" data-url="#" data-name="Местоположение">
+            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6">
                 <div class="icon-container w-12 h-8 flex items-center justify-center rounded-full transition-colors"><i data-lucide="map-pin" class="w-5 h-5"></i></div>
             </button>
-            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6" data-url="#" data-name="Выплаты">
+            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6">
                 <div class="icon-container w-12 h-8 flex items-center justify-center rounded-full transition-colors"><i data-lucide="credit-card" class="w-5 h-5"></i></div>
             </button>
-            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6" data-url="#" data-name="Обучение">
+            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6">
                 <div class="icon-container w-12 h-8 flex items-center justify-center rounded-full transition-colors"><i data-lucide="graduation-cap" class="w-5 h-5"></i></div>
             </button>
-            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6" data-url="#" data-name="Чаты">
+            <button class="nav-item flex flex-col items-center justify-center h-full w-1/6">
                 <div class="icon-container w-12 h-8 flex items-center justify-center rounded-full transition-colors"><i data-lucide="message-square-more" class="w-5 h-5"></i></div>
             </button>
         </div>
@@ -240,6 +308,90 @@
     </div>
 
     <script>
+        // --- ЛОГИКА НАВИГАЦИИ ---
+        let currentScreenId = 'screen-main';
+        let isAnimating = false;
+        const transitionDuration = 600; // Должно совпадать с CSS
+
+        const transitionClasses = {
+            forward: { entering: 'slide-in-right', exiting: 'slide-out-left', initial: 'initial-right' },
+            backward: { entering: 'slide-in-left', exiting: 'slide-out-right', initial: 'initial-left' }
+        };
+
+        function navigate(targetScreenId, direction, callback) {
+            if (isAnimating || currentScreenId === targetScreenId) return;
+            isAnimating = true;
+
+            const currentScreen = document.getElementById(currentScreenId);
+            const targetScreen = document.getElementById(targetScreenId);
+            const classes = transitionClasses[direction];
+            
+            // 1. Подготовка целевого экрана
+            targetScreen.classList.remove('active', classes.entering, classes.exiting, 'initial-left', 'initial-right');
+            targetScreen.classList.add(classes.initial);
+            targetScreen.style.display = 'block'; // Ensure it's visible for anim
+            
+            requestAnimationFrame(() => {
+                // 2. Старт анимации
+                currentScreen.classList.remove('active', 'initial-left', 'initial-right');
+                currentScreen.classList.add(classes.exiting);
+                
+                targetScreen.classList.remove(classes.initial);
+                targetScreen.classList.add(classes.entering);
+                
+                // 3. Ждем завершения
+                setTimeout(() => {
+                    currentScreen.classList.remove(classes.exiting);
+                    
+                    if (direction === 'forward') {
+                        currentScreen.classList.add('initial-left');
+                    } else {
+                        currentScreen.classList.add('initial-right');
+                    }
+                    
+                    targetScreen.classList.remove(classes.entering, classes.initial);
+                    targetScreen.classList.add('active');
+                    
+                    currentScreenId = targetScreenId;
+                    isAnimating = false;
+
+                    // Вызываем коллбэк (загрузка контента)
+                    if (callback) callback();
+
+                }, transitionDuration);
+            });
+        }
+
+        const navHome = document.getElementById('nav-home');
+        const navSchedule = document.getElementById('nav-schedule');
+        const iframeEl = document.getElementById('schedule-iframe');
+        let iframeLoaded = false;
+
+        // Клик на ГЛАВНЫЙ
+        navHome.addEventListener('click', () => {
+            updateActiveNav(navHome);
+            navigate('screen-main', 'backward');
+        });
+
+        // Клик на РАСПИСАНИЕ
+        navSchedule.addEventListener('click', () => {
+            updateActiveNav(navSchedule);
+            navigate('screen-schedule', 'forward', () => {
+                // Это выполняется ТОЛЬКО после окончания анимации
+                if (!iframeLoaded) {
+                    const url = iframeEl.getAttribute('data-src');
+                    iframeEl.src = url;
+                    iframeLoaded = true;
+                }
+            });
+        });
+
+        function updateActiveNav(activeBtn) {
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            activeBtn.classList.add('active');
+        }
+
+        // --- ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ ---
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx4IXGi1WIYwr12fHYqQ6lGaLDOjgW2q9sf5ovHUrP-sh3jkfBdXhlVZ70NsCL4tNgDCg/exec';
         const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
         const LOGOUT_URL = 'https://u8902054545-design.github.io/Auth-ITC-Platform/'; 
@@ -253,7 +405,7 @@
         let isSlotActive = false;
         let canStartSlot = false;
         let selectedDateObj = new Date();
-        let lastRenderedState = null; // Для предотвращения лишних перерисовок
+        let lastRenderedState = null; 
 
         const loadingOverlay = document.getElementById('loadingOverlay');
         const mainActionButton = document.getElementById('main-action-button');
@@ -564,16 +716,6 @@
             }
         });
 
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const url = item.getAttribute('data-url');
-                if (url && url !== '#') {
-                    showLoading();
-                    window.location.href = url;
-                }
-            });
-        });
-
         document.addEventListener('DOMContentLoaded', async () => {
             lucide.createIcons();
             mainActionButton.innerHTML = BUTTON_SPINNER_SVG;
@@ -601,4 +743,4 @@
         document.addEventListener('contextmenu', e => e.preventDefault());
     </script>
 </body>
-                </html>
+</html>
