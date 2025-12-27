@@ -246,27 +246,6 @@
         </div>
     </div>
 
-    <div id="vpn-sheet" class="bottom-sheet-overlay fixed inset-0 bg-black/60 z-[70] flex justify-center items-end">
-        <div class="bottom-sheet-content w-full max-w-md bg-[#1F1F1F] text-white p-6 rounded-t-2xl shadow-xl mb-4 sm:mb-0">
-            <div class="flex flex-col items-center text-center">
-                <div class="w-16 h-16 rounded-full bg-blue-900/20 flex items-center justify-center mb-5 ring-1 ring-[#0000FF]/30">
-                    <i data-lucide="shield-check" class="w-8 h-8 text-[#0000FF]"></i>
-                </div>
-                
-                <h2 class="text-xl font-bold mb-3 text-white">Рекомендация по сети</h2>
-                <p class="text-gray-400 text-sm mb-6 leading-relaxed">
-                    Для корректной работы системы и задач, пожалуйста, используйте VPN подключение:
-                    <br>
-                    <span class="text-white font-bold mt-2 inline-block text-base">🇺🇸 Dallas, USA</span>
-                </p>
-                
-                <button id="vpn-close-btn" class="w-full py-3.5 rounded-lg font-bold text-white shadow-lg transition-transform active:scale-95 bg-[#0000FF]">
-                    Хорошо
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // Ссылки
         const TASKS_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Tasks/';
@@ -297,29 +276,12 @@
         const calendarContainer = document.getElementById('calendar-strip');
         const mainContent = document.getElementById('main-content');
 
-        // Элементы для VPN Sheet
-        const vpnSheet = document.getElementById('vpn-sheet');
-        const vpnCloseBtn = document.getElementById('vpn-close-btn');
-
         // Навигация
         document.getElementById('profile-button').addEventListener('click', () => { if(!isAuthErrorVisible) window.location.href = ACCOUNT_URL; });
         document.getElementById('nav-home').addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
         function showLoading() { loadingOverlay.classList.add('visible'); }
         function hideLoading() { loadingOverlay.classList.remove('visible'); }
-
-        // --- НОВАЯ ФУНКЦИЯ ДЛЯ VPN ОКНА ---
-        function showVpnWarning() {
-            setTimeout(() => {
-                vpnSheet.classList.add('open');
-                lucide.createIcons(); // Обновляем иконки внутри шита на всякий случай
-            }, 500); // Небольшая задержка для плавности после загрузки
-        }
-
-        vpnCloseBtn.addEventListener('click', () => {
-            vpnSheet.classList.remove('open');
-        });
-        // -----------------------------------
 
         function createNotification(type, message) {
             const area = document.getElementById('notification-area');
@@ -561,10 +523,6 @@
                 const p2 = fetchStatusLogic(true).then(data => updateButtons(data));
                 await Promise.all([p1, p2]);
 
-                // --- ПОКАЗ VPN WARNING ПОСЛЕ ЗАГРУЗКИ ---
-                showVpnWarning();
-                // ----------------------------------------
-
                 // ЗАПУСК ЦИКЛА ПРОВЕРКИ КАЖДЫЕ 3 СЕКУНДЫ
                 setInterval(async () => {
                     if (isAuthErrorVisible) return; // Если уже ошибка, не спамим
@@ -588,4 +546,4 @@
         document.addEventListener('contextmenu', e => e.preventDefault());
     </script>
 </body>
-</html>
+    </html>
